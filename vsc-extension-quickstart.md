@@ -26,17 +26,20 @@ This is the contributor-facing quickstart. End-user docs live in [README.md](./R
 
 ## Useful scripts
 
-| Command                           | Use                                                                 |
-| --------------------------------- | ------------------------------------------------------------------- |
-| `npm run compile`                 | One-shot build to `out/`.                                           |
-| `npm run typecheck`               | `tsc --noEmit`; runs the same type checks without writing files.    |
-| `npm run lint` / `lint:fix`       | ESLint over `src/`.                                                 |
-| `npm run format` / `format:check` | Prettier over the whole repo.                                       |
-| `npm run test:unit`               | Vitest, fast — runs anything under `src/test/unit/`.                |
-| `npm run test:coverage`           | Vitest with v8 coverage.                                            |
-| `npm run test:integration`        | Spawns a real VS Code instance via `@vscode/test-electron`. Slower. |
+| Command                           | Use                                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run verify`                  | Full local check: typecheck → lint → format:check → unit tests → compile. Run this before pushing or after multi-file edits.         |
+| `npm run compile`                 | One-shot build to `out/`. The Extension Development Host loads from `out/`, so run this (or have `watch` running) after any TS edit. |
+| `npm run typecheck`               | `tsc --noEmit`; type checks without writing files. Faster than `compile` but does not refresh `out/`.                                |
+| `npm run lint` / `lint:fix`       | ESLint over `src/`.                                                                                                                  |
+| `npm run format` / `format:check` | Prettier over the whole repo.                                                                                                        |
+| `npm run test:unit`               | Vitest, fast — runs anything under `src/test/unit/`. Reads TS directly; doesn't touch `out/`.                                        |
+| `npm run test:coverage`           | Vitest with v8 coverage.                                                                                                             |
+| `npm run test:integration`        | Spawns a real VS Code instance via `@vscode/test-electron`. Slower. Implicitly runs `compile` via `pretest`.                         |
 
-CI (see `.github/workflows/ci.yml`) runs typecheck → lint → format:check → unit tests on every push.
+CI (see `.github/workflows/ci.yml`) runs format:check → lint → typecheck → unit tests → compile → integration tests on every push, and uploads `out/` as an artifact.
+
+> **Gotcha:** if you only run `typecheck` (or `test:unit`) locally, `out/` stays stale and the Extension Development Host will load whatever it was last built with. Always have `npm run watch` running in a terminal, or run `npm run verify` (or `npm run compile`) before reloading the dev host.
 
 ## Testing strategy
 

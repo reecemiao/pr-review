@@ -99,7 +99,7 @@
                 },
                 "prReview.model.family": {
                     "type": "string",
-                    "default": "gpt-4o",
+                    "default": "gpt-5-mini",
                     "description": "Language model family (e.g. gpt-4o, claude-sonnet-4)."
                 },
                 "prReview.toolScope": {
@@ -159,7 +159,8 @@
         "test:unit:watch": "vitest",
         "test:coverage": "vitest run --coverage",
         "test:integration": "vscode-test",
-        "test": "vscode-test"
+        "test": "vscode-test",
+        "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit && npm run compile"
     },
     "dependencies": {
         "@octokit/rest": "^21.1.1"

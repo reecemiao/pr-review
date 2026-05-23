@@ -15,7 +15,7 @@ export function getBaseBranch(): string {
 export function getModelSelector(): { vendor: string; family: string } {
     return {
         vendor: cfg().get<string>('model.vendor', 'copilot'),
-        family: cfg().get<string>('model.family', 'gpt-4o'),
+        family: cfg().get<string>('model.family', 'gpt-5-mini'),
     };
 }
 
