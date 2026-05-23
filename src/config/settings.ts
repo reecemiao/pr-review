@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { type ToolScope } from '../types';
+import { type ThinkingEffort, type ToolScope } from '../types';
 
 const SECTION = 'prReview';
 
@@ -15,7 +15,7 @@ export function getBaseBranch(): string {
 export function getModelSelector(): { vendor: string; family: string } {
     return {
         vendor: cfg().get<string>('model.vendor', 'copilot'),
-        family: cfg().get<string>('model.family', 'gpt-4o'),
+        family: cfg().get<string>('model.family', 'gpt-5-mini'),
     };
 }
 
@@ -34,4 +34,8 @@ export function getEnterpriseBaseUrl(): string | undefined {
 
 export function getMaxAgentIterations(): number {
     return cfg().get<number>('maxAgentIterations', 20);
+}
+
+export function getThinkingEffort(): ThinkingEffort {
+    return cfg().get<ThinkingEffort>('thinkingEffort', 'medium');
 }

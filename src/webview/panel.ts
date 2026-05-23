@@ -78,6 +78,11 @@ export class ReviewPanel {
         this.panel.webview.postMessage(msg);
     }
 
+    /** Subscribe to panel disposal (e.g. for worktree cleanup). */
+    onDispose(listener: () => void): vscode.Disposable {
+        return this.panel.onDidDispose(listener);
+    }
+
     dispose(): void {
         for (const d of this.disposables) {
             d.dispose();

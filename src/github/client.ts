@@ -6,6 +6,13 @@ import { getEnterpriseBaseUrl } from '../config/settings';
 type OctokitInstance = {
     pulls: {
         list(params: object): Promise<{ data: Array<{ number: number; head: { sha: string } }> }>;
+        get(params: object): Promise<{
+            data: {
+                number: number;
+                head: { sha: string; ref: string };
+                base: { sha: string; ref: string };
+            };
+        }>;
         createReview(params: object): Promise<{ data: { id: number; html_url: string } }>;
     };
 };
