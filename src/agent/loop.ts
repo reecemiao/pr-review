@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-import { AgentTool, ToolContext } from './tools';
-import { Finding } from '../types';
+import { type AgentTool, type ToolContext } from './tools';
+import { type Finding } from '../types';
 import { makeSubmitFindingsTool } from './tools/submitFindings';
 
 export interface AgentRunInput {

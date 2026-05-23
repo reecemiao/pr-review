@@ -1,4 +1,4 @@
-import { AgentTool, clampOutput } from './types';
+import { type AgentTool, clampOutput } from './types';
 import { git } from '../../git/exec';
 
 interface Input {

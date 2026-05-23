@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { AgentTool, clampOutput } from './types';
+import { type AgentTool, clampOutput } from './types';
 
 interface Input {
     pattern: string;

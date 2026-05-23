@@ -1,5 +1,5 @@
-import { AgentTool } from './types';
-import { Finding, Severity } from '../../types';
+import { type AgentTool } from './types';
+import { type Finding, type Severity } from '../../types';
 
 const SEVERITIES: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
 

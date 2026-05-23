@@ -42,7 +42,11 @@ export default [
             curly: 'warn',
             eqeqeq: 'warn',
             'no-throw-literal': 'warn',
-            semi: 'warn',
+
+            '@typescript-eslint/consistent-type-imports': [
+                'warn',
+                { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+            ],
 
             'import/order': [
                 'warn',

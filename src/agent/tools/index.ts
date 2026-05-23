@@ -4,8 +4,8 @@ import { runLinterTool } from './linters';
 import { listDirTool } from './listDir';
 import { readFileTool } from './readFile';
 import { runShellTool } from './shell';
-import { AgentTool } from './types';
-import { ToolScope } from '../../types';
+import { type AgentTool } from './types';
+import { type ToolScope } from '../../types';
 
 export { makeSubmitFindingsTool } from './submitFindings';
 export type { AgentTool, ToolContext } from './types';

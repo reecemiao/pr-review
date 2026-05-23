@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-import { ReviewResult, SubmitPayload, Finding, ReviewDecision } from '../types';
-import { ToWebview, FromWebview } from './types';
+import { type ReviewResult, type SubmitPayload, type Finding, type ReviewDecision } from '../types';
+import { type ToWebview, type FromWebview } from './types';
 
 export interface ReviewPanelCallbacks {
     onSubmit(

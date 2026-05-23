@@ -1,5 +1,5 @@
 import { getOctokit } from './client';
-import { Finding, ReviewDecision } from '../types';
+import { type Finding, type ReviewDecision } from '../types';
 
 export interface SubmitReviewInput {
     owner: string;

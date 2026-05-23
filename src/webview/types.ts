@@ -1,4 +1,4 @@
-import { Finding, ReviewDecision, ReviewResult, SubmitPayload } from '../types';
+import { type Finding, type ReviewDecision, type ReviewResult, type SubmitPayload } from '../types';
 
 export type ToWebview =
     | { kind: 'init'; result: ReviewResult }

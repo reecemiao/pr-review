@@ -3,7 +3,7 @@ import { promisify } from 'util';
 
 import * as vscode from 'vscode';
 
-import { AgentTool, clampOutput } from './types';
+import { type AgentTool, clampOutput } from './types';
 
 const execP = promisify(exec);
 

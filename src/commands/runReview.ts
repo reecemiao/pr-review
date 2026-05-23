@@ -13,7 +13,7 @@ import { getDiffAgainstBase } from '../git/diff';
 import { findOpenPr } from '../github/findPr';
 import { submitReview } from '../github/submitReview';
 import { loadTemplate } from '../templates';
-import { Finding, ReviewDecision, ReviewResult, severityToDecision } from '../types';
+import { type Finding, type ReviewDecision, type ReviewResult, severityToDecision } from '../types';
 import { ReviewPanel } from '../webview/panel';
 
 export function registerRunReview(context: vscode.ExtensionContext): vscode.Disposable[] {
