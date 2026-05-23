@@ -3,6 +3,15 @@
     "displayName": "PR Review",
     "description": "Review GitHub Enterprise pull requests using GitHub Copilot, with confirmation before posting.",
     "version": "0.0.1",
+    "publisher": "reecemiao",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/reecemiao/pr-review.git"
+    },
+    "bugs": {
+        "url": "https://github.com/reecemiao/pr-review/issues"
+    },
     "engines": {
         "vscode": "^1.120.0"
     },
@@ -160,7 +169,9 @@
         "test:coverage": "vitest run --coverage",
         "test:integration": "vscode-test",
         "test": "vscode-test",
-        "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit && npm run compile"
+        "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit && npm run compile",
+        "package": "vsce package",
+        "publish": "vsce publish"
     },
     "dependencies": {
         "@octokit/rest": "^21.1.1"
@@ -172,6 +183,7 @@
         "@vitest/coverage-v8": "4.1.7",
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.5.2",
+        "@vscode/vsce": "^3.9.1",
         "eslint": "^9.39.3",
         "eslint-config-prettier": "10.1.8",
         "eslint-import-resolver-typescript": "4.4.4",
