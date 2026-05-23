@@ -13,6 +13,7 @@ import {
 import { listBranches } from '../git/branch';
 import { getDiffBetween } from '../git/diff';
 import { submitReview } from '../github/submitReview';
+import { log, logError } from '../logging';
 import { loadTemplate } from '../templates';
 import {
     type Finding,
@@ -153,6 +154,7 @@ async function pickBranchMode(): Promise<
 
 function showErr(err: unknown): void {
     const msg = err instanceof Error ? err.message : String(err);
+    logError('command error', err);
     vscode.window.showErrorMessage(`PR Review: ${msg}`);
 }
 
@@ -188,8 +190,13 @@ async function runReviewCore(
     progress: vscode.Progress<{ message?: string }>,
     token: vscode.CancellationToken,
 ): Promise<void> {
+    log(
+        `review: start mode=${mode} pr=${target.prNumber ?? '-'} base=${target.baseRef} head=${target.headRef}`,
+    );
+
     progress.report({ message: `Diffing ${target.headRef} against ${target.baseRef}…` });
     const diffResult = await getDiffBetween(target.cwd, target.baseRef, target.headRef);
+    log(`review: diff ${diffResult.diff.length}b across ${diffResult.changedFiles.length} files`);
 
     progress.report({ message: 'Loading review template…' });
     const template = await loadTemplate(
@@ -197,6 +204,7 @@ async function runReviewCore(
         target.workspaceUri,
         diffResult.changedFiles,
     );
+    log(`review: template languages=[${template.languages.join(',') || 'generic'}]`);
 
     progress.report({ message: 'Selecting language model…' });
     const sel = getModelSelector();

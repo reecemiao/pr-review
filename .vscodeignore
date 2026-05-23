@@ -19,3 +19,7 @@ vsc-extension-quickstart.md
 # Build artifacts (vitest.config.ts is covered by the *.ts rule below)
 **/*.map
 **/*.ts
+
+# Icon sources (only the rendered PNG ships)
+media/build_icon.py
+media/icon.svg

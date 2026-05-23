@@ -1,4 +1,5 @@
 import { git } from './exec';
+import { assertSafeRef } from './refSafety';
 
 /**
  * Read a file at a specific git ref via `git show <ref>:<path>`.
@@ -7,6 +8,7 @@ import { git } from './exec';
  * rather than the working tree.
  */
 export async function showFileAtRef(cwd: string, ref: string, relPath: string): Promise<string> {
+    assertSafeRef(ref);
     const out = await git(['show', `${ref}:${relPath}`], { cwd });
     return out;
 }
@@ -16,6 +18,7 @@ export async function showFileAtRef(cwd: string, ref: string, relPath: string): 
  * Returns rows like `file\tpath` or `dir\tpath`.
  */
 export async function lsTreeAtRef(cwd: string, ref: string, relPath: string): Promise<string[]> {
+    assertSafeRef(ref);
     const target = relPath === '' || relPath === '.' ? `${ref}:` : `${ref}:${relPath}`;
     // Single `ls-tree -z` call gives us mode/type/object/name; parse types from it directly.
     const out = await git(['ls-tree', '-z', target], { cwd });
@@ -55,6 +58,7 @@ export async function grepAtRef(
     pathspec: string | undefined,
     maxResults: number,
 ): Promise<string[]> {
+    assertSafeRef(ref);
     const args = [
         'grep',
         '-n',

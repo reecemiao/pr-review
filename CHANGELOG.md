@@ -7,6 +7,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 ### Added
 
+- Extension icon (`media/icon.png`) and richer marketplace metadata: `keywords` for discoverability, `categories` now `AI` / `SCM Providers` / `Linters` instead of bare `Other`.
+- "PR Review" Output Channel. Iteration counts, tool names, durations, and errors log unconditionally. Set `prReview.debugLog: true` to also log full prompts, tool inputs, and tool results.
+
+### Security
+
+- Reject git refs starting with `-` before passing them to `git show` / `git ls-tree` / `git grep`. Prevents an adversarial model tool call from being interpreted as a git option (`--upload-pack=…`, `-c …`, etc.).
+
+### Fixed
+
+- Worktrees created in `pr-worktree` / `branch-worktree` modes are now swept on extension `deactivate()`, and the temp root is pruned of entries older than 24h on activation. Previously, a host crash or reload between worktree creation and panel disposal would leak directories in `os.tmpdir()`.
+
+### Internal
+
+- Removed redundant `activationEvents`; command-triggered activation is implicit since `engines.vscode >= 1.74`.
+
+### Added
+
 - Agentic review pipeline driven by `vscode.lm.sendRequest` with a tool-calling loop. The model terminates the loop by calling `submitFindings` with structured findings.
 - Five entry points:
     - `PR Review: Review current branch` — palette; diffs against `prReview.baseBranch`.

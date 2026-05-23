@@ -16,15 +16,21 @@
         "vscode": "^1.120.0"
     },
     "categories": [
-        "Other"
+        "AI",
+        "SCM Providers",
+        "Linters"
     ],
-    "activationEvents": [
-        "onCommand:prReview.run",
-        "onCommand:prReview.reviewBranch",
-        "onCommand:prReview.reviewPrNoCheckout",
-        "onCommand:prReview.reviewPrCheckout",
-        "onCommand:prReview.reviewPrWorktree"
+    "keywords": [
+        "pull request",
+        "pr review",
+        "code review",
+        "github",
+        "github enterprise",
+        "copilot",
+        "language model",
+        "ai review"
     ],
+    "icon": "media/icon.png",
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
@@ -150,6 +156,11 @@
                     ],
                     "default": "medium",
                     "markdownDescription": "Reasoning effort hint passed to the language model via `modelOptions.reasoning_effort`. Only applies to models that support it (e.g. gpt-5-mini, o-series). `minimal` is fastest; `high` does the most thinking."
+                },
+                "prReview.debugLog": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Verbose logging in the PR Review Output Channel: full prompts, tool inputs, and tool results. Off by default; the channel still records iteration counts, tool calls, durations, and errors."
                 }
             }
         }
