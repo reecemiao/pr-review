@@ -39,6 +39,8 @@ describe('assertSafeRefPath', () => {
     });
 
     it('rejects option-like prefixes', () => {
-        expect(() => assertSafeRefPath('--upload-pack=evil:src/foo.ts')).toThrow(/option injection/);
+        expect(() => assertSafeRefPath('--upload-pack=evil:src/foo.ts')).toThrow(
+            /option injection/,
+        );
     });
 });
