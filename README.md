@@ -1,71 +1,139 @@
-# pr-review README
+# PR Review
 
-This is the README for your extension "pr-review". After writing up a brief description, we recommend including the following sections.
+Agentic GitHub pull request review inside VS Code, powered by GitHub Copilot's language models via the [Language Model API](https://code.visualstudio.com/api/extension-guides/language-model). The extension runs a tool-using review agent against your diff, shows results in a webview with per-comment checkboxes, and (optionally) submits the selected comments back to GitHub as a real PR review.
+
+Works against github.com and GitHub Enterprise.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### Five entry points
 
-For example if there is an image subfolder under your extension project workspace:
+| Command                             | Where                                                                                                                                         | What it does                                                                                                                                                      |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PR Review: Review current branch`  | Command palette                                                                                                                               | Diffs the current branch against `prReview.baseBranch` and reviews it.                                                                                            |
+| `PR Review: Review another branch…` | Command palette                                                                                                                               | Pick any local or remote-tracking branch, then pick a review strategy (see below). Diffs against `prReview.baseBranch`.                                           |
+| `Review PR (without checkout)`      | Right-click on a PR in the [GitHub Pull Requests](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-pull-request-github) tree | Fetches the PR's head, runs the agent with file-reading tools routed through `git show`/`git ls-tree`/`git grep` at the PR's ref. Your working tree is untouched. |
+| `Checkout & Review PR`              | Right-click on a PR                                                                                                                           | `git checkout` the PR head (refuses if the working tree is dirty), then review on disk.                                                                           |
+| `Review PR in worktree`             | Right-click on a PR                                                                                                                           | `git worktree add --detach` to a temp dir, run the agent there, and clean up when the review panel closes.                                                        |
 
-\!\[feature X\]\(images/feature-x.png\)
+### Diff base
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **Palette commands** (current branch / another branch) diff against the configured `prReview.baseBranch` (default `origin/master`).
+- **PR right-click commands** diff against the PR's actual base branch as reported by the GitHub API.
+
+### Review workflow
+
+1. The agent receives a language-specific review template (see [Templates](#templates)) as its system prompt, plus the diff and changed-file list.
+2. It explores the codebase using a limited tool set — `readFile`, `listDir`, `grep`, `gitShow` — and optionally linters / shell commands if you raise `prReview.toolScope`.
+3. When finished, it calls a `submitFindings` tool with structured findings (`severity`, `title`, `body`, `file`, `line`, optional `suggestedFix`). That call terminates the agent loop.
+4. The findings open in a webview. Each is checkboxed; you pick which to send. The proposed decision (`APPROVE` / `COMMENT` / `REQUEST_CHANGES`) is derived from severity but you can override it in a dropdown before submitting.
+5. **Submit** posts a GitHub PR review via the REST API. **Copy as markdown** drops the same content on the clipboard for use elsewhere — useful when there's no open PR yet.
+
+If the current branch has no open PR (or you're using one of the "review without an associated PR" paths), Submit is disabled with a hint; the rest of the panel works for local self-review.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- **VS Code** with [GitHub Copilot](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) installed and signed in (provides the `copilot` vendor for `vscode.lm.selectChatModels`).
+- **git** on `PATH` — the extension shells out for diff, fetch, worktree, and ref-aware reads.
+- **GitHub auth** — uses VS Code's built-in `github` (or `github-enterprise`) authentication provider. You'll be prompted on first submit; the extension requests the `repo` scope.
+- **Optional**: The [GitHub Pull Requests](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-pull-request-github) extension if you want the three right-click commands. Without it, you can still use the two palette commands.
 
-## Extension Settings
+## Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+All settings live under the `prReview.*` prefix.
 
-For example:
+| Setting                             | Type   | Default         | Description                                                                                                                                                  |
+| ----------------------------------- | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `prReview.baseBranch`               | string | `origin/master` | Base branch for the two palette commands. Right-click commands ignore this and use the PR's own base.                                                        |
+| `prReview.model.vendor`             | string | `copilot`       | Passed to `vscode.lm.selectChatModels({ vendor })`.                                                                                                          |
+| `prReview.model.family`             | string | `gpt-5-mini`    | Model family. Anything Copilot exposes — `gpt-4o`, `gpt-5-mini`, `claude-sonnet-4`, etc.                                                                     |
+| `prReview.toolScope`                | enum   | `read-only`     | `read-only` / `read-only-with-linters` / `shell-with-confirm`. See below.                                                                                    |
+| `prReview.extraInstructions`        | object | `{}`            | Map of language → workspace-relative path to extra `.md` instructions appended to the bundled template. Example: `{ "python": "./.review/team-python.md" }`. |
+| `prReview.githubEnterprise.baseUrl` | string | `""`            | GitHub Enterprise API base URL, e.g. `https://github.example.com/api/v3`. Empty for github.com.                                                              |
+| `prReview.maxAgentIterations`       | number | `20`            | Safety cap on agent LM iterations per review. One iteration = one model request (with any number of tool calls).                                             |
+| `prReview.thinkingEffort`           | enum   | `medium`        | `minimal` / `low` / `medium` / `high`. Passed via `modelOptions.reasoning_effort`. Applies to reasoning models (gpt-5-mini, o-series); ignored elsewhere.    |
 
-This extension contributes the following settings:
+### Tool scopes
 
-- `myExtension.enable`: Enable/disable this extension.
-- `myExtension.thing`: Set to `blah` to do something.
+- **`read-only`** _(default)_: `readFile`, `listDir`, `grep`, `gitShow`. No side effects. In `*-no-checkout` modes these reads are routed through git so the agent sees the target branch's state even though your workspace is on a different branch.
+- **`read-only-with-linters`**: above plus `runLinter` with a fixed allowlist (`ruff`, `mypy`, `bandit`, `eslint`). Each invocation runs the linter against the workspace; the agent can choose to run any of them.
+- **`shell-with-confirm`**: above plus `runShell`. Each shell call prompts you with a modal Approve/Deny dialog before running.
 
-## Known Issues
+## Templates
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+Bundled in `templates/`:
 
-## Release Notes
+- `python-reviewer.md` — PEP 8, type hints, Pythonic patterns, security (SQL/command injection, eval/exec, weak crypto), framework checks (Django / FastAPI / Flask).
+- `typescript-reviewer.md` — type safety, async correctness, XSS / prototype pollution, idioms.
+- `generic-reviewer.md` — language-agnostic fallback.
 
-Users appreciate release notes as you update your extension.
+The template loader picks one (or more) based on extensions of the changed files. If `prReview.extraInstructions[lang]` is set, the contents of that file are appended after the bundled template. Both layers are prepended to the agent's system prompt.
 
-### 1.0.0
+To customize: either edit the bundled `.md` (rebuild required) or add an `extraInstructions` entry pointing at a file in your repo.
 
-Initial release of ...
+## How review-without-checkout works
 
-### 1.0.1
+In `pr-no-checkout` and `branch-no-checkout` modes, the workspace stays on whatever branch you have open. The agent's file-reading tools detect the active `ref` in their `ToolContext` and route through git plumbing:
 
-Fixed issue #.
+- `readFile` → `git show <ref>:<path>`
+- `listDir` → `git ls-tree <ref> <path>`
+- `grep` → `git grep <pattern> <ref>`
 
-### 1.1.0
+This is the safe way to review a PR from the right-click menu without disturbing your working tree, and the model still sees the PR's actual file contents — not yours.
 
-Added features X, Y, and Z.
+## Known limitations
 
----
+- The GitHub PR extension's tree-node shape isn't public API. PR-number extraction probes `pullRequestModel.number`, `pullRequest.number`, `item.number`, `prNumber`, `number`. If none match, an `InputBox` asks you for the PR number — the right-click flow still works, just with one extra dialog.
+- In worktree mode, the webview's "open file at line" still opens from your _main_ workspace, not the worktree. If your workspace is on a different branch, the line numbers may not align. Documented; consider checking out the branch first if precise navigation matters.
+- `branch-checkout` on a remote ref like `origin/foo` may detach HEAD (depending on your git version); the review itself still works. Use a local branch name to avoid this.
+- The `grep` tool uses a glob pattern in FS mode but `git grep` pathspecs in ref mode — they aren't quite the same syntax. Stick to simple paths (`src/`, `*.py`) for portability.
+- Agent loops are bounded by `prReview.maxAgentIterations`. If you see "Agent did not terminate within N iterations," raise it or check the Copilot logs.
 
-## Following extension guidelines
+## Development
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+```bash
+npm install
+npm run watch        # rebuild on change
+# F5 in VS Code to launch the Extension Development Host
+```
 
-- [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+Scripts:
 
-## Working with Markdown
+| Script                            | Purpose                                              |
+| --------------------------------- | ---------------------------------------------------- |
+| `npm run compile`                 | Build to `out/`.                                     |
+| `npm run watch`                   | TS watch mode.                                       |
+| `npm run typecheck`               | `tsc --noEmit`.                                      |
+| `npm run lint` / `lint:fix`       | ESLint.                                              |
+| `npm run format` / `format:check` | Prettier.                                            |
+| `npm run test:unit`               | Vitest unit tests (`src/test/unit/`).                |
+| `npm run test:coverage`           | Vitest with coverage.                                |
+| `npm run test:integration`        | VS Code extension tests via `@vscode/test-electron`. |
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+Project layout:
 
-- Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-- Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-- Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+```
+src/
+  extension.ts            # activate() registers commands
+  types.ts                # Finding, ReviewDecision, ReviewMode, etc.
+  config/settings.ts      # typed wrappers over workspace config
+  git/                    # exec, branch, diff, fetch, worktree, refRead
+  templates/index.ts      # language detection + template loader
+  agent/
+    loop.ts               # vscode.lm sendRequest loop
+    tools/                # readFile, listDir, grep, gitShow, linters, shell, submitFindings
+  github/                 # auth, client (Octokit dynamic import), findPr, submitReview
+  commands/
+    runReview.ts          # registers all 5 commands; shared review pipeline
+    modes.ts              # resolveTarget(): mode → cwd, workspace, refs, cleanup
+    prNode.ts             # PR-number extraction from tree node + fallback prompt
+  webview/
+    panel.ts              # ReviewPanel; postMessage bridge
+    types.ts              # ToWebview / FromWebview message types
+templates/                # bundled .md system prompts (ships outside src/)
+media/                    # webview UI assets (HTML, CSS, JS) — also ships outside src/
+```
 
-## For more information
+## License
 
-- [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-- [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+See [LICENSE](./LICENSE).

@@ -20,19 +20,37 @@
     ],
     "activationEvents": [
         "onCommand:prReview.run",
-        "onCommand:prReview.runFromPrList"
+        "onCommand:prReview.reviewBranch",
+        "onCommand:prReview.reviewPrNoCheckout",
+        "onCommand:prReview.reviewPrCheckout",
+        "onCommand:prReview.reviewPrWorktree"
     ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
             {
                 "command": "prReview.run",
-                "title": "PR Review: Review current branch",
+                "title": "Review current branch",
                 "category": "PR Review"
             },
             {
-                "command": "prReview.runFromPrList",
-                "title": "Review with PR Review",
+                "command": "prReview.reviewBranch",
+                "title": "Review another branch…",
+                "category": "PR Review"
+            },
+            {
+                "command": "prReview.reviewPrNoCheckout",
+                "title": "Review PR (without checkout)",
+                "category": "PR Review"
+            },
+            {
+                "command": "prReview.reviewPrCheckout",
+                "title": "Checkout & Review PR",
+                "category": "PR Review"
+            },
+            {
+                "command": "prReview.reviewPrWorktree",
+                "title": "Review PR in worktree",
                 "category": "PR Review"
             }
         ],
@@ -42,15 +60,36 @@
                     "command": "prReview.run"
                 },
                 {
-                    "command": "prReview.runFromPrList",
+                    "command": "prReview.reviewBranch"
+                },
+                {
+                    "command": "prReview.reviewPrNoCheckout",
+                    "when": "false"
+                },
+                {
+                    "command": "prReview.reviewPrCheckout",
+                    "when": "false"
+                },
+                {
+                    "command": "prReview.reviewPrWorktree",
                     "when": "false"
                 }
             ],
             "view/item/context": [
                 {
-                    "command": "prReview.runFromPrList",
+                    "command": "prReview.reviewPrNoCheckout",
                     "when": "view == pr:github && viewItem =~ /pullrequest/",
                     "group": "prreview@1"
+                },
+                {
+                    "command": "prReview.reviewPrCheckout",
+                    "when": "view == pr:github && viewItem =~ /pullrequest/",
+                    "group": "prreview@2"
+                },
+                {
+                    "command": "prReview.reviewPrWorktree",
+                    "when": "view == pr:github && viewItem =~ /pullrequest/",
+                    "group": "prreview@3"
                 }
             ]
         },
@@ -69,7 +108,7 @@
                 },
                 "prReview.model.family": {
                     "type": "string",
-                    "default": "gpt-4o",
+                    "default": "gpt-5-mini",
                     "description": "Language model family (e.g. gpt-4o, claude-sonnet-4)."
                 },
                 "prReview.toolScope": {
@@ -100,6 +139,17 @@
                     "default": 20,
                     "minimum": 1,
                     "description": "Safety cap on agent tool-call iterations per review."
+                },
+                "prReview.thinkingEffort": {
+                    "type": "string",
+                    "enum": [
+                        "minimal",
+                        "low",
+                        "medium",
+                        "high"
+                    ],
+                    "default": "medium",
+                    "markdownDescription": "Reasoning effort hint passed to the language model via `modelOptions.reasoning_effort`. Only applies to models that support it (e.g. gpt-5-mini, o-series). `minimal` is fastest; `high` does the most thinking."
                 }
             }
         }
@@ -119,6 +169,7 @@
         "test:coverage": "vitest run --coverage",
         "test:integration": "vscode-test",
         "test": "vscode-test",
+        "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit && npm run compile",
         "package": "vsce package",
         "publish": "vsce publish"
     },
