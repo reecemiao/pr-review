@@ -1,5 +1,5 @@
-import { getEnterpriseBaseUrl } from '../config/settings';
 import { getGithubToken } from './auth';
+import { getEnterpriseBaseUrl } from '../config/settings';
 
 // @octokit/rest is ESM-only; load via dynamic import from our CJS extension.
 // We type it loosely since the consumed surface (pulls.list, pulls.createReview) is small.

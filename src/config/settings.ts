@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 import { ToolScope } from '../types';
 
 const SECTION = 'prReview';

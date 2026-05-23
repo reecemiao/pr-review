@@ -1,5 +1,5 @@
-import { git } from '../../git/exec';
 import { AgentTool, clampOutput } from './types';
+import { git } from '../../git/exec';
 
 interface Input {
     ref: string;

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 import { getEnterpriseBaseUrl } from '../config/settings';
 
 export async function getGithubToken(): Promise<string> {

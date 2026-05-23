@@ -1,5 +1,5 @@
-import { git } from './exec';
 import { getMergeBase } from './branch';
+import { git } from './exec';
 
 export interface DiffResult {
     diff: string;

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 import { registerRunReview } from './commands/runReview';
 
 export function activate(context: vscode.ExtensionContext): void {

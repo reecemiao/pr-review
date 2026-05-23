@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+
+import { runAgent } from '../agent/loop';
+import { getToolsForScope } from '../agent/tools';
 import {
     getBaseBranch,
     getMaxAgentIterations,
@@ -7,13 +10,11 @@ import {
 } from '../config/settings';
 import { getCurrentBranch, getOriginRepoSlug } from '../git/branch';
 import { getDiffAgainstBase } from '../git/diff';
-import { loadTemplate } from '../templates';
-import { getToolsForScope } from '../agent/tools';
-import { runAgent } from '../agent/loop';
 import { findOpenPr } from '../github/findPr';
 import { submitReview } from '../github/submitReview';
-import { ReviewPanel } from '../webview/panel';
+import { loadTemplate } from '../templates';
 import { Finding, ReviewDecision, ReviewResult, severityToDecision } from '../types';
+import { ReviewPanel } from '../webview/panel';
 
 export function registerRunReview(context: vscode.ExtensionContext): vscode.Disposable[] {
     const run = vscode.commands.registerCommand('prReview.run', async () => {

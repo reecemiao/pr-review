@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 import { AgentTool, ToolContext } from './tools';
 import { Finding } from '../types';
 import { makeSubmitFindingsTool } from './tools/submitFindings';

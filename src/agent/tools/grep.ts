@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 import { AgentTool, clampOutput } from './types';
 
 interface Input {
