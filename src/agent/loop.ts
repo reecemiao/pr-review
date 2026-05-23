@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { type AgentTool, type ToolContext } from './tools';
+import { log, logDebug, logError } from '../logging';
 import { type Finding, type ThinkingEffort } from '../types';
 import { makeSubmitFindingsTool } from './tools/submitFindings';
 
@@ -45,12 +46,22 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
         vscode.LanguageModelChatMessage.User(userPrompt),
     ];
 
+    const agentStartedAt = Date.now();
+    log(
+        `agent: start tools=${allTools.length} maxIter=${maxIterations} effort=${thinkingEffort ?? '-'} model=${model.family ?? model.id ?? '?'}`,
+    );
+    logDebug('agent: system prompt:\n' + systemPrompt);
+    logDebug('agent: user prompt:\n' + userPrompt);
+
     for (let iter = 0; iter < maxIterations; iter++) {
         if (token.isCancellationRequested) {
+            log(`agent: cancelled before iter ${iter + 1}`);
             throw new vscode.CancellationError();
         }
 
         onProgress?.(`Thinking (iteration ${iter + 1}/${maxIterations})…`);
+        const iterStartedAt = Date.now();
+        log(`agent: iter ${iter + 1}/${maxIterations} sending request`);
 
         const requestOptions: vscode.LanguageModelChatRequestOptions = { tools: toolSpecs };
         if (thinkingEffort) {
@@ -71,12 +82,23 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
             }
         }
 
+        log(
+            `agent: iter ${iter + 1} response in ${Date.now() - iterStartedAt}ms ` +
+                `(${toolCalls.length} tool calls, ${textParts.join('').length}b text)`,
+        );
+
         if (toolCalls.length === 0) {
             const captured = getResult();
             if (captured) {
+                log(
+                    `agent: done in ${Date.now() - agentStartedAt}ms findings=${captured.findings.length}`,
+                );
                 return captured;
             }
             // Model gave a final text answer without calling submitFindings — surface as an empty review.
+            log(
+                `agent: done in ${Date.now() - agentStartedAt}ms findings=0 (no submitFindings call)`,
+            );
             return {
                 summary: textParts.join('').trim() || 'Model ended without calling submitFindings.',
                 findings: [],
@@ -90,6 +112,8 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
         for (const call of toolCalls) {
             onProgress?.(`Calling ${call.name}`);
             const tool = toolByName.get(call.name);
+            const callStartedAt = Date.now();
+            logDebug(`agent: tool ${call.name} input:`, call.input);
             let resultText: string;
             try {
                 if (!tool) {
@@ -97,9 +121,14 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
                 } else {
                     resultText = await tool.invoke(call.input, ctx, token);
                 }
+                log(
+                    `agent: tool ${call.name} -> ${resultText.length}b in ${Date.now() - callStartedAt}ms`,
+                );
             } catch (err) {
                 resultText = `error: ${err instanceof Error ? err.message : String(err)}`;
+                logError(`agent: tool ${call.name} threw`, err);
             }
+            logDebug(`agent: tool ${call.name} result:\n` + resultText);
             resultParts.push(
                 new vscode.LanguageModelToolResultPart(call.callId, [
                     new vscode.LanguageModelTextPart(resultText),
@@ -110,9 +139,13 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
 
         const captured = getResult();
         if (captured) {
+            log(
+                `agent: done in ${Date.now() - agentStartedAt}ms findings=${captured.findings.length}`,
+            );
             return captured;
         }
     }
 
+    log(`agent: hit maxIterations=${maxIterations} after ${Date.now() - agentStartedAt}ms`);
     throw new Error(`Agent did not terminate within ${maxIterations} iterations.`);
 }

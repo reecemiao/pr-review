@@ -1,5 +1,6 @@
 import { type AgentTool, clampOutput } from './types';
 import { git } from '../../git/exec';
+import { assertSafeRefPath } from '../../git/refSafety';
 
 interface Input {
     ref: string;
@@ -20,6 +21,7 @@ export const gitShowTool: AgentTool = {
     },
     async invoke(rawInput, ctx) {
         const input = rawInput as Input;
+        assertSafeRefPath(input.ref);
         const out = await git(['show', '--no-color', input.ref], { cwd: ctx.cwd });
         return clampOutput(out);
     },

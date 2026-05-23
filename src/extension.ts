@@ -1,11 +1,27 @@
-import { registerRunReview } from './commands/runReview';
+import * as vscode from 'vscode';
 
-import type * as vscode from 'vscode';
+import { registerRunReview } from './commands/runReview';
+import { cleanupAllWorktrees, pruneStaleWorktrees } from './git/worktree';
+import { initLogging, log, logError } from './logging';
+
+const STALE_WORKTREE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
 
 export function activate(context: vscode.ExtensionContext): void {
+    initLogging(context);
+    log('extension: activated');
+
     context.subscriptions.push(...registerRunReview(context));
+
+    // Best-effort: clean up worktrees abandoned by previous sessions (host
+    // crash, reload-without-graceful-deactivate, etc.). Runs in the background
+    // so it never blocks command registration.
+    const pruneCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    void pruneStaleWorktrees(STALE_WORKTREE_MAX_AGE_MS, pruneCwd).catch((err) => {
+        logError('startup worktree prune failed', err);
+    });
 }
 
-export function deactivate(): void {
-    // no-op
+export async function deactivate(): Promise<void> {
+    log('extension: deactivating, cleaning up worktrees');
+    await cleanupAllWorktrees();
 }
