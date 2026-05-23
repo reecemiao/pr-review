@@ -9,15 +9,91 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:prReview.run",
+    "onCommand:prReview.runFromPrList"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "pr-review.helloWorld",
-        "title": "Hello World"
+        "command": "prReview.run",
+        "title": "PR Review: Review current branch",
+        "category": "PR Review"
+      },
+      {
+        "command": "prReview.runFromPrList",
+        "title": "Review with PR Review",
+        "category": "PR Review"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "prReview.run"
+        },
+        {
+          "command": "prReview.runFromPrList",
+          "when": "false"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "prReview.runFromPrList",
+          "when": "view == pr:github && viewItem =~ /pullrequest/",
+          "group": "prreview@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "PR Review",
+      "properties": {
+        "prReview.baseBranch": {
+          "type": "string",
+          "default": "origin/master",
+          "description": "Base branch to diff the current branch against."
+        },
+        "prReview.model.vendor": {
+          "type": "string",
+          "default": "copilot",
+          "description": "Language model vendor (passed to vscode.lm.selectChatModels)."
+        },
+        "prReview.model.family": {
+          "type": "string",
+          "default": "gpt-4o",
+          "description": "Language model family (e.g. gpt-4o, claude-sonnet-4)."
+        },
+        "prReview.toolScope": {
+          "type": "string",
+          "enum": [
+            "read-only",
+            "read-only-with-linters",
+            "shell-with-confirm"
+          ],
+          "default": "read-only",
+          "markdownDescription": "What the agent is allowed to run:\n- `read-only`: filesystem reads, grep, git show/log/diff\n- `read-only-with-linters`: above plus auto-invoke common linters (ruff/mypy/bandit/eslint)\n- `shell-with-confirm`: agent can propose any shell command; user approves each"
+        },
+        "prReview.extraInstructions": {
+          "type": "object",
+          "default": {},
+          "description": "Extra instruction markdown files appended per language, e.g. { \"python\": \"./team-python.md\" }. Paths are resolved relative to the workspace folder.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "prReview.githubEnterprise.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub Enterprise API base URL (e.g. https://github.example.com/api/v3). Leave empty for github.com."
+        },
+        "prReview.maxAgentIterations": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "description": "Safety cap on agent tool-call iterations per review."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -27,14 +103,17 @@
     "lint": "eslint src",
     "test": "vscode-test"
   },
+  "dependencies": {
+    "@octokit/rest": "^21.1.1"
+  },
   "devDependencies": {
-    "@types/vscode": "^1.120.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.56.1",
+    "@types/vscode": "^1.120.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.39.3",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.56.1"
   }
 }
