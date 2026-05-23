@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { type AgentTool, type ToolContext } from './tools';
-import { type Finding } from '../types';
+import { type Finding, type ThinkingEffort } from '../types';
 import { makeSubmitFindingsTool } from './tools/submitFindings';
 
 export interface AgentRunInput {
@@ -11,6 +11,7 @@ export interface AgentRunInput {
     tools: AgentTool[];
     ctx: ToolContext;
     maxIterations: number;
+    thinkingEffort?: ThinkingEffort;
     token: vscode.CancellationToken;
     onProgress?: (msg: string) => void;
 }
@@ -21,7 +22,17 @@ export interface AgentRunResult {
 }
 
 export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
-    const { systemPrompt, userPrompt, model, tools, ctx, maxIterations, token, onProgress } = input;
+    const {
+        systemPrompt,
+        userPrompt,
+        model,
+        tools,
+        ctx,
+        maxIterations,
+        thinkingEffort,
+        token,
+        onProgress,
+    } = input;
 
     const { tool: submitTool, getResult } = makeSubmitFindingsTool();
     const allTools = [...tools, submitTool];
@@ -41,7 +52,13 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
 
         onProgress?.(`Thinking (iteration ${iter + 1}/${maxIterations})…`);
 
-        const response = await model.sendRequest(messages, { tools: toolSpecs }, token);
+        const requestOptions: vscode.LanguageModelChatRequestOptions = { tools: toolSpecs };
+        if (thinkingEffort) {
+            // Pass via modelOptions; the underlying provider routes the key it understands.
+            // OpenAI / gpt-5 / o-series use `reasoning_effort`. Anthropic ignores unknown keys.
+            requestOptions.modelOptions = { reasoning_effort: thinkingEffort };
+        }
+        const response = await model.sendRequest(messages, requestOptions, token);
 
         const toolCalls: vscode.LanguageModelToolCallPart[] = [];
         const textParts: string[] = [];

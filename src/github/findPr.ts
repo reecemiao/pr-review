@@ -1,5 +1,13 @@
 import { getOctokit } from './client';
 
+export interface PrDetails {
+    number: number;
+    headBranch: string;
+    headSha: string;
+    baseBranch: string;
+    baseSha: string;
+}
+
 export async function findOpenPr(
     owner: string,
     repo: string,
@@ -19,4 +27,20 @@ export async function findOpenPr(
     }
     const pr = data[0];
     return { number: pr.number, headSha: pr.head.sha };
+}
+
+export async function getPrDetails(
+    owner: string,
+    repo: string,
+    prNumber: number,
+): Promise<PrDetails> {
+    const octokit = await getOctokit();
+    const { data } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
+    return {
+        number: data.number,
+        headBranch: data.head.ref,
+        headSha: data.head.sha,
+        baseBranch: data.base.ref,
+        baseSha: data.base.sha,
+    };
 }

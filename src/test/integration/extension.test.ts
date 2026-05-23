@@ -2,7 +2,13 @@ import * as assert from 'assert';
 
 import * as vscode from 'vscode';
 
-const EXPECTED_COMMANDS = ['prReview.run', 'prReview.runFromPrList'];
+const EXPECTED_COMMANDS = [
+    'prReview.run',
+    'prReview.reviewBranch',
+    'prReview.reviewPrNoCheckout',
+    'prReview.reviewPrCheckout',
+    'prReview.reviewPrWorktree',
+];
 
 // vscode-test loads the extension under "<publisher>.pr-review"; publisher is "undefined_publisher"
 // when package.json has none. Tolerate both rather than hardcoding.

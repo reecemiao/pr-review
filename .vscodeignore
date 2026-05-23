@@ -1,11 +1,21 @@
+# Dev-only directories
 .vscode/**
 .vscode-test/**
+.github/**
+.claude/**
+coverage/**
 src/**
+
+# Dev-only files
 .gitignore
-.yarnrc
+.prettierignore
+.prettierrc.json
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/eslint.config.mjs
+**/vitest.config.ts
+**/.vscode-test.*
+
+# Build artifacts
 **/*.map
 **/*.ts
-**/.vscode-test.*

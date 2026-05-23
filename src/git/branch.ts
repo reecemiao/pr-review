@@ -48,3 +48,42 @@ export async function getOriginRepoSlug(cwd: string): Promise<RepoSlug | null> {
     }
     return parseRepoSlug(url);
 }
+
+export interface BranchEntry {
+    name: string;
+    /** True for refs/remotes/*. */
+    remote: boolean;
+    /** True for the currently checked-out branch. */
+    current: boolean;
+}
+
+/**
+ * Enumerate local + remote-tracking branches via `for-each-ref`.
+ * Skips symbolic refs like `origin/HEAD -> origin/main` (they have an empty objectname display in our format).
+ */
+export async function listBranches(cwd: string): Promise<BranchEntry[]> {
+    const current = await getCurrentBranch(cwd).catch(() => '');
+    const out = await git(
+        [
+            'for-each-ref',
+            '--format=%(refname:short)\t%(refname)\t%(symref)',
+            'refs/heads',
+            'refs/remotes',
+        ],
+        { cwd },
+    );
+    const entries: BranchEntry[] = [];
+    for (const line of out.split(/\r?\n/)) {
+        if (!line) {
+            continue;
+        }
+        const [shortName, fullRef, symref] = line.split('\t');
+        if (symref) {
+            // Skip e.g. `origin/HEAD -> origin/main` symbolic refs.
+            continue;
+        }
+        const remote = fullRef.startsWith('refs/remotes/');
+        entries.push({ name: shortName, remote, current: !remote && shortName === current });
+    }
+    return entries;
+}

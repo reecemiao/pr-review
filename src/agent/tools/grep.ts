@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { type AgentTool, clampOutput } from './types';
+import { grepAtRef } from '../../git/refRead';
 
 interface Input {
     pattern: string;
@@ -12,7 +13,7 @@ export const grepTool: AgentTool = {
     spec: {
         name: 'grep',
         description:
-            'Search workspace files for a regex pattern. Returns matching lines with file:line prefixes. Use this before readFile to locate references.',
+            'Search workspace files for a regex pattern. Returns matching lines with file:line prefixes. Use this before readFile to locate references. When a review ref is in effect, searches via `git grep` at that ref.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -26,10 +27,17 @@ export const grepTool: AgentTool = {
             required: ['pattern'],
         },
     },
-    async invoke(rawInput, _ctx, token) {
+    async invoke(rawInput, ctx, token) {
         const input = rawInput as Input;
-        const include = input.glob ?? '**/*';
         const maxResults = input.maxResults ?? 100;
+
+        if (ctx.ref) {
+            // git grep takes a pathspec rather than a glob; pass-through what we can.
+            const rows = await grepAtRef(ctx.cwd, ctx.ref, input.pattern, input.glob);
+            return clampOutput(rows.slice(0, maxResults).join('\n') || '(no matches)');
+        }
+
+        const include = input.glob ?? '**/*';
         const re = new RegExp(input.pattern);
         const files = await vscode.workspace.findFiles(include, '**/node_modules/**', 2000, token);
         const out: string[] = [];

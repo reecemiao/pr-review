@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { type AgentTool, clampOutput } from './types';
+import { showFileAtRef } from '../../git/refRead';
 
 interface Input {
     path: string;
@@ -12,7 +13,7 @@ export const readFileTool: AgentTool = {
     spec: {
         name: 'readFile',
         description:
-            'Read the contents of a workspace file. Optionally restrict to a line range. Paths are workspace-relative.',
+            'Read the contents of a workspace file. Optionally restrict to a line range. Paths are workspace-relative. When a review ref is in effect, reads come from git at that ref (not the working tree).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -25,9 +26,7 @@ export const readFileTool: AgentTool = {
     },
     async invoke(rawInput, ctx) {
         const input = rawInput as Input;
-        const uri = vscode.Uri.joinPath(ctx.workspace, input.path);
-        const bytes = await vscode.workspace.fs.readFile(uri);
-        const text = new TextDecoder('utf-8').decode(bytes);
+        const text = await readText(ctx, input.path);
         if (input.startLine === undefined && input.endLine === undefined) {
             return clampOutput(text);
         }
@@ -39,3 +38,15 @@ export const readFileTool: AgentTool = {
         return clampOutput(numbered);
     },
 };
+
+async function readText(
+    ctx: { workspace: vscode.Uri; cwd: string; ref?: string },
+    relPath: string,
+): Promise<string> {
+    if (ctx.ref) {
+        return showFileAtRef(ctx.cwd, ctx.ref, relPath);
+    }
+    const uri = vscode.Uri.joinPath(ctx.workspace, relPath);
+    const bytes = await vscode.workspace.fs.readFile(uri);
+    return new TextDecoder('utf-8').decode(bytes);
+}

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { type ToolScope } from '../types';
+import { type ThinkingEffort, type ToolScope } from '../types';
 
 const SECTION = 'prReview';
 
@@ -34,4 +34,8 @@ export function getEnterpriseBaseUrl(): string | undefined {
 
 export function getMaxAgentIterations(): number {
     return cfg().get<number>('maxAgentIterations', 20);
+}
+
+export function getThinkingEffort(): ThinkingEffort {
+    return cfg().get<ThinkingEffort>('thinkingEffort', 'medium');
 }

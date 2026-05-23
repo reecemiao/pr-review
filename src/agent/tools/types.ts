@@ -3,6 +3,13 @@ import type * as vscode from 'vscode';
 export interface ToolContext {
     workspace: vscode.Uri;
     cwd: string;
+    /**
+     * When set, ref-aware tools (readFile / listDir / grep) read from git's
+     * object store at this ref instead of the working tree. Used in
+     * `pr-no-checkout` mode where the on-disk workspace is on a different
+     * branch than the PR being reviewed.
+     */
+    ref?: string;
 }
 
 export interface AgentTool {
