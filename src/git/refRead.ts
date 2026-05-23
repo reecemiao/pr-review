@@ -17,71 +17,80 @@ export async function showFileAtRef(cwd: string, ref: string, relPath: string): 
  */
 export async function lsTreeAtRef(cwd: string, ref: string, relPath: string): Promise<string[]> {
     const target = relPath === '' || relPath === '.' ? `${ref}:` : `${ref}:${relPath}`;
-    const out = await git(['ls-tree', '--name-only', '-z', target], { cwd });
-    const names = out.split('\0').filter(Boolean);
-    // We need the type, so re-query with --object-only mode is awkward;
-    // simpler: a second pass using `git ls-tree <ref> -- <path>` non-name-only to get types.
-    const detailed = await git(['ls-tree', '-z', target], { cwd });
-    const rows = detailed
-        .split('\0')
-        .filter(Boolean)
-        .map((line) => {
-            // Format: <mode> SP <type> SP <object> TAB <name>
-            const tabIdx = line.indexOf('\t');
-            if (tabIdx < 0) {
-                return null;
-            }
-            const meta = line.slice(0, tabIdx).split(' ');
-            const type = meta[1] ?? 'blob';
-            const name = line.slice(tabIdx + 1);
-            return { type, name };
-        })
-        .filter((r): r is { type: string; name: string } => r !== null);
-    // Map git types to our display kinds
+    // Single `ls-tree -z` call gives us mode/type/object/name; parse types from it directly.
+    const out = await git(['ls-tree', '-z', target], { cwd });
     const seen = new Set<string>();
-    const out2: string[] = [];
-    for (const r of rows) {
-        if (seen.has(r.name)) {
+    const rows: string[] = [];
+    for (const entry of out.split('\0')) {
+        if (!entry) {
             continue;
         }
-        seen.add(r.name);
-        const kind = r.type === 'tree' ? 'dir' : r.type === 'blob' ? 'file' : 'other';
-        out2.push(`${kind}\t${r.name}`);
+        // Format: <mode> SP <type> SP <object> TAB <name>
+        const tabIdx = entry.indexOf('\t');
+        if (tabIdx < 0) {
+            continue;
+        }
+        const meta = entry.slice(0, tabIdx).split(' ');
+        const type = meta[1] ?? 'blob';
+        const name = entry.slice(tabIdx + 1);
+        if (seen.has(name)) {
+            continue;
+        }
+        seen.add(name);
+        const kind = type === 'tree' ? 'dir' : type === 'blob' ? 'file' : 'other';
+        rows.push(`${kind}\t${name}`);
     }
-    // Note: we computed `names` for sanity but ls-tree -z above is authoritative.
-    void names;
-    return out2;
+    return rows;
 }
 
 /**
  * Run `git grep <pattern> <ref>` and return matching `path:line\tcontent` rows.
+ * Capped per-file via `-m` and globally via early-return to keep memory bounded
+ * even for high-cardinality matches.
  */
 export async function grepAtRef(
     cwd: string,
     ref: string,
     pattern: string,
-    pathspec?: string,
+    pathspec: string | undefined,
+    maxResults: number,
 ): Promise<string[]> {
-    const args = ['grep', '-n', '-E', '--no-color', pattern, ref];
+    const args = [
+        'grep',
+        '-n',
+        '-E',
+        '--no-color',
+        // Per-file match cap. Most callers ask for ~100 total results, so 50 per
+        // file is plenty without letting one noisy file flood the buffer.
+        `-m${Math.max(1, Math.min(maxResults, 50))}`,
+        pattern,
+        ref,
+    ];
     if (pathspec) {
         args.push('--', pathspec);
     }
+    let out: string;
     try {
-        const out = await git(args, { cwd });
-        return out
-            .split(/\r?\n/)
-            .filter(Boolean)
-            .map((line) => {
-                // git grep formats as `<ref>:<path>:<line>:<content>` — drop the ref prefix.
-                const refColon = `${ref}:`;
-                return line.startsWith(refColon) ? line.slice(refColon.length) : line;
-            });
+        out = await git(args, { cwd });
     } catch (err) {
         // git grep exits with code 1 when there are no matches; surface other errors.
-        const e = err as { code?: number; stderr?: string };
+        const e = err as { code?: number };
         if (e.code === 1) {
             return [];
         }
         throw err;
     }
+    const refColon = `${ref}:`;
+    const rows: string[] = [];
+    for (const line of out.split(/\r?\n/)) {
+        if (!line) {
+            continue;
+        }
+        // git grep formats as `<ref>:<path>:<line>:<content>` — drop the ref prefix.
+        rows.push(line.startsWith(refColon) ? line.slice(refColon.length) : line);
+        if (rows.length >= maxResults) {
+            break;
+        }
+    }
+    return rows;
 }

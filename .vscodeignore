@@ -10,12 +10,12 @@ src/**
 .gitignore
 .prettierignore
 .prettierrc.json
+package-lock.json
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/eslint.config.mjs
-**/vitest.config.ts
 **/.vscode-test.*
 
-# Build artifacts
+# Build artifacts (vitest.config.ts is covered by the *.ts rule below)
 **/*.map
 **/*.ts

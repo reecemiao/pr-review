@@ -2,7 +2,14 @@ import * as vscode from 'vscode';
 
 import { getBaseBranch } from '../config/settings';
 import { getCurrentBranch, getOriginRepoSlug, type RepoSlug } from '../git/branch';
-import { checkoutRef, fetchPrHead, resolveRefToSha, workingTreeIsClean } from '../git/fetch';
+import {
+    checkoutRef,
+    checkoutTrackingBranch,
+    deleteRef,
+    fetchPrHead,
+    resolveRefToSha,
+    workingTreeIsClean,
+} from '../git/fetch';
 import { addWorktree, type Worktree } from '../git/worktree';
 import { findOpenPr, getPrDetails } from '../github/findPr';
 import { type ReviewMode } from '../types';
@@ -122,7 +129,11 @@ async function resolvePrMode(
             baseRef,
             headRef: headSha,
             refForTools: headSha,
-            cleanup: noop,
+            // In no-checkout mode the fetched ref isn't part of any working state —
+            // remove it so refs/prreview/* doesn't accumulate over time.
+            // (Kept for `pr-checkout` and `pr-worktree`: the user may want it as a
+            // recovery anchor since their working tree / worktree now points at it.)
+            cleanup: () => deleteRef(cwd, localRef),
         };
     }
     if (mode === 'pr-checkout') {
@@ -176,9 +187,12 @@ async function resolveBranchMode(
     try {
         headSha = await resolveRefToSha(cwd, branch);
     } catch {
-        throw new Error(
-            `Branch "${branch}" not found locally. Fetch it first or use a remote-tracking name like origin/${branch}.`,
-        );
+        // Branch input could be a local name, a remote-tracking name (`origin/foo`),
+        // or junk. Give a hint that doesn't accidentally suggest `origin/origin/foo`.
+        const suggestion = branch.includes('/')
+            ? 'Fetch it first or check the spelling.'
+            : `Fetch it first or try the remote-tracking name "origin/${branch}".`;
+        throw new Error(`Branch "${branch}" not found locally. ${suggestion}`);
     }
 
     // If an open PR matches this branch on the origin, surface it so Submit works.
@@ -205,13 +219,19 @@ async function resolveBranchMode(
     if (mode === 'branch-checkout') {
         await assertCleanTree(cwd, 'Checkout & Review');
         progress(`Checking out ${branch}…`);
-        await checkoutRef(cwd, branch);
+        // If the input is a remote-tracking ref like `origin/foo`, create or move a
+        // local tracking branch `foo` instead of detaching HEAD on the remote.
+        if (branch.startsWith('origin/')) {
+            await checkoutTrackingBranch(cwd, localBranchName, branch);
+        } else {
+            await checkoutRef(cwd, branch);
+        }
         return {
             cwd,
             workspaceUri: folder.uri,
             repo,
             prNumber,
-            headBranch: branch,
+            headBranch: localBranchName,
             headSha,
             baseRef,
             headRef: 'HEAD',

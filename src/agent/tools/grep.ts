@@ -17,10 +17,15 @@ export const grepTool: AgentTool = {
         inputSchema: {
             type: 'object',
             properties: {
-                pattern: { type: 'string', description: 'JavaScript regex pattern (not anchored)' },
+                pattern: {
+                    type: 'string',
+                    description:
+                        'POSIX extended regex (ERE). JS-style escapes like \\d, \\w, \\s and lookarounds are NOT portable — use character classes ([0-9], [A-Za-z_], [[:space:]]). The same pattern is used by JS RegExp in workspace mode and by `git grep -E` in review-ref mode; sticking to ERE keeps results consistent across modes.',
+                },
                 glob: {
                     type: 'string',
-                    description: 'Optional include glob, e.g. "**/*.py"',
+                    description:
+                        'Optional include filter. Workspace mode: VS Code glob (e.g. "**/*.py"). Review-ref mode: git pathspec (e.g. "src/" or "*.py"). Plain extensions and directory prefixes work in both.',
                 },
                 maxResults: { type: 'integer', minimum: 1, maximum: 500, default: 100 },
             },
@@ -32,9 +37,8 @@ export const grepTool: AgentTool = {
         const maxResults = input.maxResults ?? 100;
 
         if (ctx.ref) {
-            // git grep takes a pathspec rather than a glob; pass-through what we can.
-            const rows = await grepAtRef(ctx.cwd, ctx.ref, input.pattern, input.glob);
-            return clampOutput(rows.slice(0, maxResults).join('\n') || '(no matches)');
+            const rows = await grepAtRef(ctx.cwd, ctx.ref, input.pattern, input.glob, maxResults);
+            return clampOutput(rows.join('\n') || '(no matches)');
         }
 
         const include = input.glob ?? '**/*';
