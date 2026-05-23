@@ -11,7 +11,9 @@ export interface SubmitReviewInput {
     findings: Finding[];
 }
 
-export async function submitReview(input: SubmitReviewInput): Promise<{ id: number; htmlUrl: string }> {
+export async function submitReview(
+    input: SubmitReviewInput,
+): Promise<{ id: number; htmlUrl: string }> {
     const octokit = await getOctokit();
     const comments = input.findings.map((f) => ({
         path: f.file,

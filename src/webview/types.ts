@@ -9,4 +9,7 @@ export type ToWebview =
 export type FromWebview =
     | { kind: 'openFile'; file: string; line: number }
     | { kind: 'submit'; payload: SubmitPayload }
-    | { kind: 'copyMarkdown'; payload: { findings: Finding[]; decision: ReviewDecision; summary: string } };
+    | {
+          kind: 'copyMarkdown';
+          payload: { findings: Finding[]; decision: ReviewDecision; summary: string };
+      };

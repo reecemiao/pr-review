@@ -16,5 +16,8 @@ export function clampOutput(s: string): string {
     if (s.length <= MAX_TOOL_OUTPUT_BYTES) {
         return s;
     }
-    return s.slice(0, MAX_TOOL_OUTPUT_BYTES) + `\n\n[truncated ${s.length - MAX_TOOL_OUTPUT_BYTES} bytes]`;
+    return (
+        s.slice(0, MAX_TOOL_OUTPUT_BYTES) +
+        `\n\n[truncated ${s.length - MAX_TOOL_OUTPUT_BYTES} bytes]`
+    );
 }

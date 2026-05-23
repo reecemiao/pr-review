@@ -22,7 +22,12 @@ export const listDirTool: AgentTool = {
         const uri = vscode.Uri.joinPath(ctx.workspace, input.path);
         const entries = await vscode.workspace.fs.readDirectory(uri);
         const lines = entries.map(([name, kind]) => {
-            const t = kind === vscode.FileType.Directory ? 'dir' : kind === vscode.FileType.File ? 'file' : 'other';
+            const t =
+                kind === vscode.FileType.Directory
+                    ? 'dir'
+                    : kind === vscode.FileType.File
+                      ? 'file'
+                      : 'other';
             return `${t}\t${name}`;
         });
         return clampOutput(lines.join('\n'));

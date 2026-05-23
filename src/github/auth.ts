@@ -6,6 +6,8 @@ export async function getGithubToken(): Promise<string> {
     // 'github-enterprise' is the auth provider id contributed by the official GitHub Authentication ext when Enterprise is configured.
     const providerId = isEnterprise ? 'github-enterprise' : 'github';
     const scopes = ['repo'];
-    const session = await vscode.authentication.getSession(providerId, scopes, { createIfNone: true });
+    const session = await vscode.authentication.getSession(providerId, scopes, {
+        createIfNone: true,
+    });
     return session.accessToken;
 }

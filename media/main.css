@@ -93,11 +93,26 @@ select {
     text-transform: uppercase;
 }
 
-.severity.CRITICAL { background: #b71c1c; color: #fff; }
-.severity.HIGH { background: #e65100; color: #fff; }
-.severity.MEDIUM { background: #f9a825; color: #000; }
-.severity.LOW { background: #1976d2; color: #fff; }
-.severity.INFO { background: #455a64; color: #fff; }
+.severity.CRITICAL {
+    background: #b71c1c;
+    color: #fff;
+}
+.severity.HIGH {
+    background: #e65100;
+    color: #fff;
+}
+.severity.MEDIUM {
+    background: #f9a825;
+    color: #000;
+}
+.severity.LOW {
+    background: #1976d2;
+    color: #fff;
+}
+.severity.INFO {
+    background: #455a64;
+    color: #fff;
+}
 
 .title {
     font-weight: 600;

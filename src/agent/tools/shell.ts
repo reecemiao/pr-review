@@ -45,7 +45,9 @@ export const runShellTool: AgentTool = {
         } catch (err) {
             const e = err as { stdout?: string; stderr?: string; message?: string; code?: number };
             return clampOutput(
-                [`(exit ${e.code ?? '?'})`, e.stdout ?? '', e.stderr ?? '', e.message ?? ''].filter(Boolean).join('\n'),
+                [`(exit ${e.code ?? '?'})`, e.stdout ?? '', e.stderr ?? '', e.message ?? '']
+                    .filter(Boolean)
+                    .join('\n'),
             );
         }
     },

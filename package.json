@@ -100,7 +100,11 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
+    "typecheck": "tsc -p ./ --noEmit",
     "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vscode-test"
   },
   "dependencies": {
@@ -113,6 +117,8 @@
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.39.3",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.8.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
   }

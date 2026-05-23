@@ -22,7 +22,10 @@ export interface SubmitFindingsCapture {
     findings: Finding[];
 }
 
-export function makeSubmitFindingsTool(): { tool: AgentTool; getResult: () => SubmitFindingsCapture | null } {
+export function makeSubmitFindingsTool(): {
+    tool: AgentTool;
+    getResult: () => SubmitFindingsCapture | null;
+} {
     let captured: SubmitFindingsCapture | null = null;
 
     const tool: AgentTool = {
@@ -60,7 +63,9 @@ export function makeSubmitFindingsTool(): { tool: AgentTool; getResult: () => Su
             const input = rawInput as Input;
             const findings: Finding[] = (input.findings ?? []).map((f, i) => ({
                 id: `f${i}`,
-                severity: (SEVERITIES.includes(f.severity as Severity) ? f.severity : 'INFO') as Severity,
+                severity: (SEVERITIES.includes(f.severity as Severity)
+                    ? f.severity
+                    : 'INFO') as Severity,
                 title: f.title,
                 body: f.body,
                 file: f.file,

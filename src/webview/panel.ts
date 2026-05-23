@@ -3,7 +3,9 @@ import { ReviewResult, SubmitPayload, Finding, ReviewDecision } from '../types';
 import { ToWebview, FromWebview } from './types';
 
 export interface ReviewPanelCallbacks {
-    onSubmit(payload: SubmitPayload): Promise<{ ok: true; url: string } | { ok: false; error: string }>;
+    onSubmit(
+        payload: SubmitPayload,
+    ): Promise<{ ok: true; url: string } | { ok: false; error: string }>;
     onOpenFile(file: string, line: number): Promise<void>;
     onCopyMarkdown(findings: Finding[], decision: ReviewDecision, summary: string): Promise<void>;
 }
@@ -57,7 +59,11 @@ export class ReviewPanel {
                             : { kind: 'submitResult', ok: false, error: r.error },
                     );
                 } else if (msg.kind === 'copyMarkdown') {
-                    await callbacks.onCopyMarkdown(msg.payload.findings, msg.payload.decision, msg.payload.summary);
+                    await callbacks.onCopyMarkdown(
+                        msg.payload.findings,
+                        msg.payload.decision,
+                        msg.payload.summary,
+                    );
                 }
             }),
             panel.onDidDispose(() => this.dispose()),
@@ -79,7 +85,12 @@ export class ReviewPanel {
     }
 }
 
-function renderHtml(cspSource: string, nonce: string, scriptUri: vscode.Uri, styleUri: vscode.Uri): string {
+function renderHtml(
+    cspSource: string,
+    nonce: string,
+    scriptUri: vscode.Uri,
+    styleUri: vscode.Uri,
+): string {
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>

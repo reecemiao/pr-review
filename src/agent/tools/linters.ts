@@ -40,7 +40,9 @@ export const runLinterTool: AgentTool = {
                 maxBuffer: 16 * 1024 * 1024,
                 windowsHide: true,
             });
-            return clampOutput([`$ ${input.linter} ${args.join(' ')}`, stdout, stderr].filter(Boolean).join('\n'));
+            return clampOutput(
+                [`$ ${input.linter} ${args.join(' ')}`, stdout, stderr].filter(Boolean).join('\n'),
+            );
         } catch (err) {
             const e = err as { stdout?: string; stderr?: string; message?: string; code?: number };
             return clampOutput(
