@@ -12,7 +12,8 @@ import {
 } from '../config/settings';
 import { listBranches } from '../git/branch';
 import { getDiffBetween } from '../git/diff';
-import { submitReview } from '../github/submitReview';
+import { buildDiffIndex, type DiffIndex } from '../git/diffIndex';
+import { partitionFindings, submitReview } from '../github/submitReview';
 import { log, logError } from '../logging';
 import { loadTemplate } from '../templates';
 import {
@@ -22,6 +23,7 @@ import {
     type ReviewResult,
     severityToDecision,
 } from '../types';
+import { pickFence } from '../util/markdownFence';
 import { ReviewPanel } from '../webview/panel';
 
 export function registerRunReview(context: vscode.ExtensionContext): vscode.Disposable[] {
@@ -198,6 +200,10 @@ async function runReviewCore(
     const diffResult = await getDiffBetween(target.cwd, target.baseRef, target.headRef);
     log(`review: diff ${diffResult.diff.length}b across ${diffResult.changedFiles.length} files`);
 
+    // Build the per-file/line/side index once. Used at submission time to
+    // partition findings into commentable-inline vs body-only.
+    const diffIndex: DiffIndex = buildDiffIndex(diffResult.diff);
+
     progress.report({ message: 'Loading review template…' });
     const template = await loadTemplate(
         context.extensionUri,
@@ -234,6 +240,8 @@ async function runReviewCore(
             workspace: target.workspaceUri,
             cwd: target.cwd,
             ref: target.refForTools,
+            changedFiles: diffResult.changedFiles,
+            cache: new Map<string, string>(),
         },
         maxIterations: getMaxAgentIterations(),
         thinkingEffort: getThinkingEffort(),
@@ -265,7 +273,16 @@ async function runReviewCore(
                 const selected = agentResult.findings.filter((f) =>
                     payload.selectedIds.includes(f.id),
                 );
-                const body = renderReviewBody(agentResult.summary, selected);
+                // Partition: only findings on lines in the diff hunks become
+                // inline GitHub comments. The rest are mentioned in the body
+                // so reviewers still see them.
+                const { inline, outOfHunk } = partitionFindings(selected, diffIndex);
+                if (outOfHunk.length > 0) {
+                    log(
+                        `submit: ${outOfHunk.length}/${selected.length} findings fall outside the diff hunks; sent in body only`,
+                    );
+                }
+                const body = renderReviewBody(agentResult.summary, selected, undefined, outOfHunk);
                 const r = await submitReview({
                     owner: target.repo.owner,
                     repo: target.repo.name,
@@ -273,7 +290,8 @@ async function runReviewCore(
                     headSha: target.headSha,
                     decision: payload.finalDecision,
                     body,
-                    findings: selected,
+                    findings: inline,
+                    diffIndex,
                 });
                 return { ok: true, url: r.htmlUrl };
             } catch (err) {
@@ -298,14 +316,15 @@ function buildUserPrompt(
         mode === 'pr-no-checkout' || mode === 'branch-no-checkout'
             ? '\nNote: the workspace is NOT checked out to the target branch. All file reads via tools are routed through git at the target ref, so they reflect the branch state.\n'
             : '';
+    const fence = pickFence(diff);
     return [
         `Languages detected: ${languages.join(', ') || 'unknown'}`,
         `Changed files:\n${changedFiles.map((f) => `- ${f}`).join('\n')}`,
         noCheckoutNote,
         'Diff:',
-        '```diff',
+        `${fence}diff`,
         diff,
-        '```',
+        fence,
         '',
         'Review the diff. Use the available tools to read surrounding context as needed.',
         'When done, call submitFindings with your structured review.',
@@ -332,7 +351,12 @@ async function copyAsMarkdown(
     vscode.window.showInformationMessage('Review copied to clipboard.');
 }
 
-function renderReviewBody(summary: string, findings: Finding[], decision?: ReviewDecision): string {
+function renderReviewBody(
+    summary: string,
+    findings: Finding[],
+    decision?: ReviewDecision,
+    outOfHunk?: Finding[],
+): string {
     const counts: Record<string, number> = {};
     for (const f of findings) {
         counts[f.severity] = (counts[f.severity] ?? 0) + 1;
@@ -350,5 +374,16 @@ function renderReviewBody(summary: string, findings: Finding[], decision?: Revie
                 }`,
         )
         .join('\n\n');
-    return `${header}${summary}\n\n_${countLine}_\n\n${body}`.trim();
+    // GitHub rejects inline comments outside the diff hunks, so any such
+    // findings are surfaced as plain prose at the bottom of the review body.
+    const outOfHunkSection =
+        outOfHunk && outOfHunk.length > 0
+            ? `\n\n---\n\n#### Additional findings outside the diff hunks\n\nGitHub doesn't allow inline comments on lines that aren't in the diff. These are recorded here instead:\n\n${outOfHunk
+                  .map(
+                      (f) =>
+                          `- **[${f.severity}] ${f.title}** — \`${f.file}:${f.line}\` — ${f.body}`,
+                  )
+                  .join('\n')}`
+            : '';
+    return `${header}${summary}\n\n_${countLine}_\n\n${body}${outOfHunkSection}`.trim();
 }

@@ -2,7 +2,7 @@
     "name": "pr-review",
     "displayName": "PR Review",
     "description": "Review GitHub Enterprise pull requests using GitHub Copilot, with confirmation before posting.",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "publisher": "reecemiao",
     "license": "MIT",
     "repository": {

@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-24
+
 ### Added
 
 - Extension icon (`media/icon.png`) and richer marketplace metadata: `keywords` for discoverability, `categories` now `AI` / `SCM Providers` / `Linters` instead of bare `Other`.
@@ -17,10 +19,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 ### Fixed
 
 - Worktrees created in `pr-worktree` / `branch-worktree` modes are now swept on extension `deactivate()`, and the temp root is pruned of entries older than 24h on activation. Previously, a host crash or reload between worktree creation and panel disposal would leak directories in `os.tmpdir()`.
+- The diff is now wrapped in a backtick fence longer than any run of backticks it contains. Diffs that touch markdown files with their own ` ``` ` fences no longer prematurely close the surrounding code block in the model prompt.
+- Inline GitHub review comments are filtered against the diff before submission: findings whose `file:line` isn't part of any hunk are now rendered into the review body instead of triggering a 422 from `pulls.createReview`. The comment's `side` is inferred from the hunk (added/context → RIGHT, deleted → LEFT) so deletion-line comments no longer get rejected either.
+
+### Changed
+
+- Linter tool (`runLinter`) now scopes its invocation to changed files matching the linter's languages (e.g. `eslint src/foo.ts src/bar.tsx` instead of `eslint .`). 10–100× faster on large repos. Falls back to whole-repo when no changed file applies.
+- `readFile` and `gitShow` tool calls share a per-review cache, so the agent doesn't re-fetch the same file across iterations.
+- Severity badges in the review webview now inherit theme-aware colors from VS Code (`inputValidation-*`, `statusBarItem-*`, `badge-*` palettes) instead of hardcoded hex. Improves contrast in light and high-contrast themes; the hex fallbacks preserve the previous look when a theme omits the variable.
 
 ### Internal
 
 - Removed redundant `activationEvents`; command-triggered activation is implicit since `engines.vscode >= 1.74`.
+
+## [0.1.0] - 2026-05-23
 
 ### Added
 

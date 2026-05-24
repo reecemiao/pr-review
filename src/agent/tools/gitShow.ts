@@ -22,7 +22,13 @@ export const gitShowTool: AgentTool = {
     async invoke(rawInput, ctx) {
         const input = rawInput as Input;
         assertSafeRefPath(input.ref);
+        const cacheKey = `gitShow:${input.ref}`;
+        const hit = ctx.cache?.get(cacheKey);
+        if (hit !== undefined) {
+            return clampOutput(hit);
+        }
         const out = await git(['show', '--no-color', input.ref], { cwd: ctx.cwd });
+        ctx.cache?.set(cacheKey, out);
         return clampOutput(out);
     },
 };

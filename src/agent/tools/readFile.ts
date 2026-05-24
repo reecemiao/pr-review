@@ -40,13 +40,26 @@ export const readFileTool: AgentTool = {
 };
 
 async function readText(
-    ctx: { workspace: vscode.Uri; cwd: string; ref?: string },
+    ctx: {
+        workspace: vscode.Uri;
+        cwd: string;
+        ref?: string;
+        cache?: Map<string, string>;
+    },
     relPath: string,
 ): Promise<string> {
-    if (ctx.ref) {
-        return showFileAtRef(ctx.cwd, ctx.ref, relPath);
+    // Cache key includes the ref so working-tree and ref-mode reads of the
+    // same path don't collide. "WT" marks working-tree reads.
+    const cacheKey = `readFile:${ctx.ref ?? 'WT'}:${relPath}`;
+    const hit = ctx.cache?.get(cacheKey);
+    if (hit !== undefined) {
+        return hit;
     }
-    const uri = vscode.Uri.joinPath(ctx.workspace, relPath);
-    const bytes = await vscode.workspace.fs.readFile(uri);
-    return new TextDecoder('utf-8').decode(bytes);
+    const text = ctx.ref
+        ? await showFileAtRef(ctx.cwd, ctx.ref, relPath)
+        : new TextDecoder('utf-8').decode(
+              await vscode.workspace.fs.readFile(vscode.Uri.joinPath(ctx.workspace, relPath)),
+          );
+    ctx.cache?.set(cacheKey, text);
+    return text;
 }
