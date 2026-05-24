@@ -34,8 +34,8 @@ export const commands = {
 export class CancellationError extends Error {}
 
 export const LanguageModelChatMessage = {
-    User: (..._args: unknown[]) => ({}),
-    Assistant: (..._args: unknown[]) => ({}),
+    User: (content: unknown) => ({ role: 'user' as const, content }),
+    Assistant: (content: unknown) => ({ role: 'assistant' as const, content }),
 };
 
 export class LanguageModelTextPart {

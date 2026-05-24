@@ -13,6 +13,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 ### Added
 
 - System prompts now include a "How to use tools efficiently" block explaining that one model response — even one with many parallel tool calls — counts as a single iteration. Nudges the model to batch independent reads instead of serializing them across iterations.
+- Unit tests for the agent loop (`src/test/unit/agent/loop.test.ts`) covering termination on `submitFindings`, assistant-prose preservation, parallel tool execution, result-order preservation, `maxIterations` enforcement, graceful exit on bare text, and unknown-tool error recovery.
+
+### Internal
+
+- README development section refreshed for the bundled build: new `bundle` / `bundle:prod` / `watch:bundle` / `verify` scripts documented, project layout includes `dist/`, `esbuild.mjs`, and the test directory tree, and a new subsection describes how the agent loop spends its iteration budget.
 
 ## [0.1.2] - 2026-05-24
 
