@@ -39,11 +39,36 @@ describe('buildDiffIndex', () => {
         ].join('\n');
 
         const idx = buildDiffIndex(diff);
-        // The deleted lines exist on the LEFT at their old line numbers.
-        expect(findSide(idx, 'foo.ts', 21)).toBe('LEFT');
-        expect(findSide(idx, 'foo.ts', 22)).toBe('LEFT');
+        // The deleted lines populate the underlying LEFT set so that
+        // policy decisions can inspect them, even though `findSide` does
+        // not surface LEFT matches as commentable (see policy below).
+        expect(idx.get('foo.ts')?.left.has(21)).toBe(true);
+        expect(idx.get('foo.ts')?.left.has(22)).toBe(true);
         // Context line is on both sides at the corresponding line number.
         expect(findSide(idx, 'foo.ts', 20)).toBe('RIGHT');
+    });
+
+    it('does not classify LEFT-only lines as commentable (policy: RIGHT-only)', () => {
+        // `@@ -20,3 +20,1 @@` deletes old lines 21 and 22. The model
+        // reviews the post-change state and cites new-file line numbers, so
+        // a finding on line 21 or 22 almost certainly means "line 21 of the
+        // current file" — which doesn't exist in the new file at all.
+        // Attaching such a comment to the LEFT side of the diff would land
+        // it on coincidentally-numbered deleted content. Out-of-hunk is the
+        // safer classification; runReview surfaces it in the review body.
+        const diff = [
+            'diff --git a/foo.ts b/foo.ts',
+            '--- a/foo.ts',
+            '+++ b/foo.ts',
+            '@@ -20,3 +20,1 @@',
+            ' context',
+            '-deleted 21',
+            '-deleted 22',
+        ].join('\n');
+
+        const idx = buildDiffIndex(diff);
+        expect(findSide(idx, 'foo.ts', 21)).toBeNull();
+        expect(findSide(idx, 'foo.ts', 22)).toBeNull();
     });
 
     it('handles single-line hunk headers without the count', () => {

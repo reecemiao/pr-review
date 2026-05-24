@@ -29,6 +29,10 @@ export interface PartitionedFindings {
  * Split findings into inline-commentable and out-of-hunk groups based on the
  * diff index. Exposed so the caller can render the `outOfHunk` group into the
  * review body before the request is sent.
+ *
+ * Only RIGHT-side matches qualify as inline. See `findSide` for the rationale —
+ * findings cited at line numbers that exist only on the deleted side land
+ * here in `outOfHunk` and are surfaced as prose in the review body.
  */
 export function partitionFindings(findings: Finding[], diffIndex: DiffIndex): PartitionedFindings {
     const inline: Finding[] = [];

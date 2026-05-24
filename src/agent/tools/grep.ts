@@ -43,7 +43,17 @@ export const grepTool: AgentTool = {
 
         const include = input.glob ?? '**/*';
         const re = new RegExp(input.pattern);
-        const files = await vscode.workspace.findFiles(include, '**/node_modules/**', 2000, token);
+        // VS Code's findFiles `exclude` argument REPLACES the user's
+        // files.exclude / search.exclude rather than unioning with it, so we
+        // have to spell out the common noise dirs explicitly. Otherwise the
+        // model gets matches from .git/, dist/, out/, etc. and the two modes
+        // (FS vs `git grep`) end up scanning very different file sets.
+        const files = await vscode.workspace.findFiles(
+            include,
+            '{**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/coverage/**,**/.vscode-test/**}',
+            2000,
+            token,
+        );
         const out: string[] = [];
         for (const file of files) {
             if (token.isCancellationRequested || out.length >= maxResults) {
