@@ -2,7 +2,7 @@
     "name": "pr-review",
     "displayName": "PR Review",
     "description": "Review GitHub Enterprise pull requests using GitHub Copilot, with confirmation before posting.",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "publisher": "reecemiao",
     "license": "MIT",
     "repository": {
@@ -31,7 +31,7 @@
         "ai review"
     ],
     "icon": "media/icon.png",
-    "main": "./out/extension.js",
+    "main": "./dist/extension.js",
     "contributes": {
         "commands": [
             {
@@ -166,10 +166,13 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run bundle:prod",
+        "bundle": "node esbuild.mjs",
+        "bundle:prod": "node esbuild.mjs --production",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "pretest": "npm run compile && npm run lint && npm run format:check",
+        "watch:bundle": "node esbuild.mjs --watch",
+        "pretest": "npm run compile && npm run bundle && npm run lint && npm run format:check",
         "typecheck": "tsc -p ./ --noEmit",
         "lint": "eslint src",
         "lint:fix": "eslint src --fix",
@@ -180,7 +183,7 @@
         "test:coverage": "vitest run --coverage",
         "test:integration": "vscode-test",
         "test": "vscode-test",
-        "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit && npm run compile",
+        "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit && npm run compile && npm run bundle",
         "package": "vsce package",
         "publish": "vsce publish"
     },
@@ -195,6 +198,7 @@
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.5.2",
         "@vscode/vsce": "^3.9.1",
+        "esbuild": "^0.28.0",
         "eslint": "^9.39.3",
         "eslint-config-prettier": "10.1.8",
         "eslint-import-resolver-typescript": "4.4.4",
