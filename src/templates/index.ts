@@ -47,6 +47,19 @@ async function readWorkspaceFile(workspace: vscode.Uri, relPath: string): Promis
     }
 }
 
+const TOOL_USAGE_INSTRUCTION = `
+
+---
+
+## How to use tools efficiently
+
+You operate in a tool-calling loop with a per-review iteration cap. **One iteration is one model response, regardless of how many tool calls it contains.** A response that emits five parallel tool calls counts as one iteration, not five.
+
+- When you need multiple **independent** reads — different files, unrelated greps, listings of separate directories — emit them as multiple tool calls in a **single** response. They run in parallel and their results come back together in the next turn. Serializing the same calls across iterations is strictly more expensive with no benefit.
+- Only chain calls across iterations when a later call genuinely depends on an earlier result.
+- Do not duplicate reads: \`readFile\` and \`gitShow\` results are cached for the review, so re-requesting the same path wastes a slot in your output without giving you new information.
+`;
+
 const SUBMIT_FINDINGS_INSTRUCTION = `
 
 ---
@@ -94,6 +107,7 @@ export async function loadTemplate(
         }
     }
 
+    parts.push(TOOL_USAGE_INSTRUCTION);
     parts.push(SUBMIT_FINDINGS_INSTRUCTION);
 
     return {

@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 ## [Unreleased]
 
+### Changed
+
+- Agent loop now preserves the model's prose alongside its tool calls in the assistant turn (previously dropped). Mid-loop reasoning stays in history so subsequent iterations don't repeat work or lose track of intent.
+- Tool calls emitted in the same model response now run in parallel via `Promise.all` instead of sequentially. The result order returned to the model still matches the order the model emitted the calls; per-call logging and cancellation behavior unchanged.
+
+### Added
+
+- System prompts now include a "How to use tools efficiently" block explaining that one model response — even one with many parallel tool calls — counts as a single iteration. Nudges the model to batch independent reads instead of serializing them across iterations.
+
 ## [0.1.2] - 2026-05-24
 
 ### Changed
