@@ -4,7 +4,17 @@
     const root = document.getElementById('root');
 
     /** @type {any} */
-    let state = { result: null, selected: new Set(), decision: 'COMMENT', status: '' };
+    let state = {
+        result: null,
+        selected: new Set(),
+        decision: 'COMMENT',
+        status: '',
+        // Inflight (request sent, no response yet) and submitted (succeeded)
+        // gate the Submit button so users can't accidentally post the same
+        // review twice via double-click or after the success status is up.
+        submitting: false,
+        submitted: false,
+    };
 
     function render() {
         if (!state.result) {
@@ -47,10 +57,20 @@
         toolbar.appendChild(decisionLabel);
 
         const submitBtn = document.createElement('button');
-        submitBtn.textContent = noPr ? 'Submit (no open PR)' : 'Submit to GitHub';
-        submitBtn.disabled = noPr || state.selected.size === 0;
+        submitBtn.textContent = state.submitted
+            ? 'Submitted'
+            : noPr
+              ? 'Submit (no open PR)'
+              : 'Submit to GitHub';
+        submitBtn.disabled =
+            noPr || state.selected.size === 0 || state.submitting || state.submitted;
         if (noPr) submitBtn.title = `Push the branch and open a PR to enable submission.`;
+        else if (state.submitted)
+            submitBtn.title = 'Review already submitted. Close and re-run to submit again.';
         submitBtn.addEventListener('click', () => {
+            if (state.submitting || state.submitted) return;
+            state.submitting = true;
+            state.status = 'Submitting…';
             vscode.postMessage({
                 kind: 'submit',
                 payload: {
@@ -58,7 +78,6 @@
                     finalDecision: state.decision,
                 },
             });
-            state.status = 'Submitting…';
             render();
         });
         toolbar.appendChild(submitBtn);
@@ -169,6 +188,11 @@
             state.status = msg.message;
             render();
         } else if (msg.kind === 'submitResult') {
+            state.submitting = false;
+            // Success is terminal — keep the button disabled so the same
+            // review can't be posted twice. On failure leave `submitted`
+            // false so the user can retry after fixing whatever broke.
+            state.submitted = !!msg.ok;
             state.status = msg.ok ? `Submitted: ${msg.url}` : `Failed: ${msg.error}`;
             render();
         }

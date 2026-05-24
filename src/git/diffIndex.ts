@@ -40,8 +40,14 @@ export type DiffIndex = Map<string, FileIndex>;
 
 /**
  * Look up which side a (file, line) finding should attach to.
- * Returns null when the line isn't part of any hunk for that file —
+ * Returns null when the line isn't on the RIGHT side of any hunk —
  * the caller should NOT submit it as an inline comment.
+ *
+ * Policy: only RIGHT-side matches qualify. The model reviews the post-change
+ * state and is told to cite new-file line numbers; a LEFT-only match would
+ * mean the cited line doesn't exist in the new file at all, and matching it
+ * to a coincidentally-numbered deleted line attaches the comment to unrelated
+ * content. Findings on deleted lines are surfaced in the review body instead.
  */
 export function findSide(index: DiffIndex, file: string, line: number): Side | null {
     const f = index.get(file);
@@ -50,9 +56,6 @@ export function findSide(index: DiffIndex, file: string, line: number): Side | n
     }
     if (f.right.has(line)) {
         return 'RIGHT';
-    }
-    if (f.left.has(line)) {
-        return 'LEFT';
     }
     return null;
 }

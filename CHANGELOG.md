@@ -9,15 +9,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 - Agent loop now preserves the model's prose alongside its tool calls in the assistant turn (previously dropped). Mid-loop reasoning stays in history so subsequent iterations don't repeat work or lose track of intent.
 - Tool calls emitted in the same model response now run in parallel via `Promise.all` instead of sequentially. The result order returned to the model still matches the order the model emitted the calls; per-call logging and cancellation behavior unchanged.
+- `grep` tool in FS mode now excludes `.git/`, `dist/`, `out/`, `coverage/`, and `.vscode-test/` in addition to `node_modules/`. Previously VS Code's `findFiles` `exclude` argument replaced the user's defaults, so the model could pick up matches from build artifacts and the bundled `dist/extension.js`.
+- Inline-comment classification now requires a RIGHT-side match in the diff. LEFT-only findings (line numbers that exist only on the deleted side) are routed to the review body instead of being attached to coincidentally-numbered deleted lines.
 
 ### Added
 
 - System prompts now include a "How to use tools efficiently" block explaining that one model response — even one with many parallel tool calls — counts as a single iteration. Nudges the model to batch independent reads instead of serializing them across iterations.
 - Unit tests for the agent loop (`src/test/unit/agent/loop.test.ts`) covering termination on `submitFindings`, assistant-prose preservation, parallel tool execution, result-order preservation, `maxIterations` enforcement, graceful exit on bare text, and unknown-tool error recovery.
+- Unit tests for `partitionFindings` (`src/test/unit/github/partitionFindings.test.ts`) covering RIGHT/LEFT/out-of-hunk routing.
+
+### Fixed
+
+- Review webview now disables the Submit button once a review has been posted successfully, preventing accidental duplicate submissions via re-clicking. The button also stays disabled in-flight to defend against double-clicks; submit failures still re-enable retry.
 
 ### Internal
 
 - README development section refreshed for the bundled build: new `bundle` / `bundle:prod` / `watch:bundle` / `verify` scripts documented, project layout includes `dist/`, `esbuild.mjs`, and the test directory tree, and a new subsection describes how the agent loop spends its iteration budget.
+- README settings table documents the existing `prReview.debugLog` boolean; the stale "worktree open-file uses main workspace" known-limitation bullet has been replaced with an accurate note about the editor opening outside the workspace tree.
 
 ## [0.1.2] - 2026-05-24
 

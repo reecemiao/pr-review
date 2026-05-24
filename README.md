@@ -42,16 +42,17 @@ If the current branch has no open PR (or you're using one of the "review without
 
 All settings live under the `prReview.*` prefix.
 
-| Setting                             | Type   | Default         | Description                                                                                                                                                  |
-| ----------------------------------- | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `prReview.baseBranch`               | string | `origin/master` | Base branch for the two palette commands. Right-click commands ignore this and use the PR's own base.                                                        |
-| `prReview.model.vendor`             | string | `copilot`       | Passed to `vscode.lm.selectChatModels({ vendor })`.                                                                                                          |
-| `prReview.model.family`             | string | `gpt-5-mini`    | Model family. Anything Copilot exposes — `gpt-4o`, `gpt-5-mini`, `claude-sonnet-4`, etc.                                                                     |
-| `prReview.toolScope`                | enum   | `read-only`     | `read-only` / `read-only-with-linters` / `shell-with-confirm`. See below.                                                                                    |
-| `prReview.extraInstructions`        | object | `{}`            | Map of language → workspace-relative path to extra `.md` instructions appended to the bundled template. Example: `{ "python": "./.review/team-python.md" }`. |
-| `prReview.githubEnterprise.baseUrl` | string | `""`            | GitHub Enterprise API base URL, e.g. `https://github.example.com/api/v3`. Empty for github.com.                                                              |
-| `prReview.maxAgentIterations`       | number | `20`            | Safety cap on agent LM iterations per review. One iteration = one model request (with any number of tool calls).                                             |
-| `prReview.thinkingEffort`           | enum   | `medium`        | `minimal` / `low` / `medium` / `high`. Passed via `modelOptions.reasoning_effort`. Applies to reasoning models (gpt-5-mini, o-series); ignored elsewhere.    |
+| Setting                             | Type   | Default         | Description                                                                                                                                                                                  |
+| ----------------------------------- | ------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prReview.baseBranch`               | string | `origin/master` | Base branch for the two palette commands. Right-click commands ignore this and use the PR's own base.                                                                                        |
+| `prReview.model.vendor`             | string | `copilot`       | Passed to `vscode.lm.selectChatModels({ vendor })`.                                                                                                                                          |
+| `prReview.model.family`             | string | `gpt-5-mini`    | Model family. Anything Copilot exposes — `gpt-4o`, `gpt-5-mini`, `claude-sonnet-4`, etc.                                                                                                     |
+| `prReview.toolScope`                | enum   | `read-only`     | `read-only` / `read-only-with-linters` / `shell-with-confirm`. See below.                                                                                                                    |
+| `prReview.extraInstructions`        | object | `{}`            | Map of language → workspace-relative path to extra `.md` instructions appended to the bundled template. Example: `{ "python": "./.review/team-python.md" }`.                                 |
+| `prReview.githubEnterprise.baseUrl` | string | `""`            | GitHub Enterprise API base URL, e.g. `https://github.example.com/api/v3`. Empty for github.com.                                                                                              |
+| `prReview.maxAgentIterations`       | number | `20`            | Safety cap on agent LM iterations per review. One iteration = one model request (with any number of tool calls).                                                                             |
+| `prReview.thinkingEffort`           | enum   | `medium`        | `minimal` / `low` / `medium` / `high`. Passed via `modelOptions.reasoning_effort`. Applies to reasoning models (gpt-5-mini, o-series); ignored elsewhere.                                    |
+| `prReview.debugLog`                 | bool   | `false`         | Verbose logging in the PR Review Output Channel: full prompts, tool inputs, and tool results. Off by default; the channel still records iteration counts, tool calls, durations, and errors. |
 
 ### Tool scopes
 
@@ -84,7 +85,7 @@ This is the safe way to review a PR from the right-click menu without disturbing
 ## Known limitations
 
 - The GitHub PR extension's tree-node shape isn't public API. PR-number extraction probes `pullRequestModel.number`, `pullRequest.number`, `item.number`, `prNumber`, `number`. If none match, an `InputBox` asks you for the PR number — the right-click flow still works, just with one extra dialog.
-- In worktree mode, the webview's "open file at line" still opens from your _main_ workspace, not the worktree. If your workspace is on a different branch, the line numbers may not align. Documented; consider checking out the branch first if precise navigation matters.
+- In worktree mode, "open file at line" opens the file from the temp worktree directory rather than the workspace folder — line numbers align with the review, but the editor opens outside the workspace tree so workspace-scoped features (project-wide find, file explorer focus) won't include it.
 - `branch-checkout` on a remote ref like `origin/foo` may detach HEAD (depending on your git version); the review itself still works. Use a local branch name to avoid this.
 - The `grep` tool uses a glob pattern in FS mode but `git grep` pathspecs in ref mode — they aren't quite the same syntax. Stick to simple paths (`src/`, `*.py`) for portability.
 - Agent loops are bounded by `prReview.maxAgentIterations`. If you see "Agent did not terminate within N iterations," raise it or check the Copilot logs.
