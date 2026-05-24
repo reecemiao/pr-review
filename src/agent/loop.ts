@@ -109,10 +109,8 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
         // calls, then the corresponding user turn with the tool results.
         // Including the prose keeps the model's mid-loop reasoning in history
         // so subsequent iterations don't repeat work or lose track of intent.
-        const assistantParts: (
-            | vscode.LanguageModelTextPart
-            | vscode.LanguageModelToolCallPart
-        )[] = [];
+        const assistantParts: (vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart)[] =
+            [];
         const assistantText = textParts.join('').trim();
         if (assistantText) {
             assistantParts.push(new vscode.LanguageModelTextPart(assistantText));
