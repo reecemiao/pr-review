@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-05-24
+
+### Changed
+
+- Extension now ships as a single bundled `dist/extension.js` (esbuild, ~132 KB) instead of 280 unbundled files. Cuts VSIX size and first-activation cost. `main` moved from `./out/extension.js` to `./dist/extension.js`; `out/` still produced by `tsc` for integration tests and is excluded from the VSIX.
+
+### Internal
+
+- Bumped CI `actions/checkout`, `actions/setup-node`, and `actions/upload-artifact` from `@v4` to `@v5` ahead of the Node 20 runtime deprecation (2026-06-02).
+- Added `npm run bundle` / `bundle:prod` / `watch:bundle` scripts and a `watch` compound task that runs `tsc -watch` and esbuild in watch concurrently for F5 debugging.
+
 ## [0.1.1] - 2026-05-24
 
 ### Added

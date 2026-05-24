@@ -16,10 +16,10 @@ jobs:
 
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v5
               with:
                   node-version: 22
                   cache: npm
@@ -42,13 +42,16 @@ jobs:
             - name: Compile
               run: npm run compile
 
+            - name: Bundle extension
+              run: npm run bundle:prod
+
             - name: VS Code integration tests
               run: xvfb-run -a npm run test:integration
 
-            - name: Upload build output
-              uses: actions/upload-artifact@v4
+            - name: Upload bundled extension
+              uses: actions/upload-artifact@v5
               with:
-                  name: extension-out
-                  path: out/
+                  name: extension-dist
+                  path: dist/
                   if-no-files-found: error
                   retention-days: 7

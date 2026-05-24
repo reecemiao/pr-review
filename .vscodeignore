@@ -4,7 +4,11 @@
 .github/**
 .claude/**
 coverage/**
+node_modules/**
 src/**
+
+# Unbundled tsc output — extension entry is dist/extension.js
+out/**
 
 # Dev-only files
 .gitignore
@@ -12,11 +16,13 @@ src/**
 .prettierrc.json
 package-lock.json
 vsc-extension-quickstart.md
+esbuild.mjs
 **/tsconfig.json
 **/eslint.config.mjs
 **/.vscode-test.*
+**/vitest.config.*
 
-# Build artifacts (vitest.config.ts is covered by the *.ts rule below)
+# Build artifacts (sourcemaps excluded; bundled dist/extension.js still ships)
 **/*.map
 **/*.ts
 
