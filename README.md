@@ -93,22 +93,28 @@ This is the safe way to review a PR from the right-click menu without disturbing
 
 ```bash
 npm install
-npm run watch        # rebuild on change
-# F5 in VS Code to launch the Extension Development Host
+npm run watch        # tsc -watch + esbuild --watch run in parallel
+# F5 in VS Code to launch the Extension Development Host (loads ./dist/extension.js)
 ```
+
+The shipped extension is a single bundled file (`dist/extension.js`, esbuild, ~132 KB) — the VSIX contains ~11 files instead of the unbundled ~280. `tsc` still emits `out/` for integration tests; `dist/` is what `main` in `package.json` points at and what VS Code actually loads.
 
 Scripts:
 
-| Script                            | Purpose                                              |
-| --------------------------------- | ---------------------------------------------------- |
-| `npm run compile`                 | Build to `out/`.                                     |
-| `npm run watch`                   | TS watch mode.                                       |
-| `npm run typecheck`               | `tsc --noEmit`.                                      |
-| `npm run lint` / `lint:fix`       | ESLint.                                              |
-| `npm run format` / `format:check` | Prettier.                                            |
-| `npm run test:unit`               | Vitest unit tests (`src/test/unit/`).                |
-| `npm run test:coverage`           | Vitest with coverage.                                |
-| `npm run test:integration`        | VS Code extension tests via `@vscode/test-electron`. |
+| Script                            | Purpose                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| `npm run bundle`                  | esbuild → `dist/extension.js` (sourcemap, not minified).                 |
+| `npm run bundle:prod`             | esbuild production build (minified, no sourcemap). Used by VSIX package. |
+| `npm run watch:bundle`            | esbuild watch mode.                                                      |
+| `npm run compile`                 | tsc → `out/` (for integration tests; not shipped).                       |
+| `npm run watch`                   | Compound: `tsc -watch` + `esbuild --watch` in parallel.                  |
+| `npm run typecheck`               | `tsc --noEmit`.                                                          |
+| `npm run lint` / `lint:fix`       | ESLint.                                                                  |
+| `npm run format` / `format:check` | Prettier.                                                                |
+| `npm run test:unit`               | Vitest unit tests (`src/test/unit/`).                                    |
+| `npm run test:coverage`           | Vitest with coverage.                                                    |
+| `npm run test:integration`        | VS Code extension tests via `@vscode/test-electron`.                     |
+| `npm run verify`                  | All of: typecheck + lint + format:check + unit tests + compile + bundle. |
 
 Project layout:
 
@@ -120,7 +126,7 @@ src/
   git/                    # exec, branch, diff, fetch, worktree, refRead
   templates/index.ts      # language detection + template loader
   agent/
-    loop.ts               # vscode.lm sendRequest loop
+    loop.ts               # vscode.lm sendRequest loop (parallel tool execution)
     tools/                # readFile, listDir, grep, gitShow, linters, shell, submitFindings
   github/                 # auth, client (Octokit dynamic import), findPr, submitReview
   commands/
@@ -130,9 +136,23 @@ src/
   webview/
     panel.ts              # ReviewPanel; postMessage bridge
     types.ts              # ToWebview / FromWebview message types
+  test/
+    unit/                 # vitest; `vscode` is aliased to the stub in `_stubs/`
+    integration/          # @vscode/test-electron suite
+    _stubs/vscode.ts      # minimal vscode API stub for unit tests
 templates/                # bundled .md system prompts (ships outside src/)
 media/                    # webview UI assets (HTML, CSS, JS) — also ships outside src/
+esbuild.mjs               # bundler entry; reads --production / --watch flags
 ```
+
+### How the agent loop spends its iterations
+
+The agent runs at most `prReview.maxAgentIterations` model round-trips per review (one `sendRequest` = one iteration, regardless of how many tool calls are in the response). To get the most out of that budget:
+
+- Tool calls emitted in the same response run **in parallel** via `Promise.all`. Result order is preserved by `callId` so the model sees them in the order it asked for, regardless of finish order.
+- The model's prose between tool calls is preserved in the assistant turn — mid-loop reasoning stays in history so the next iteration doesn't lose context.
+- The system prompt explicitly asks the model to batch independent reads in a single response rather than serialize them across iterations.
+- `readFile` and `gitShow` results are cached per-review, so re-requesting the same path is a no-op.
 
 ## License
 
