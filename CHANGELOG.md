@@ -5,6 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 ## [Unreleased]
 
+### Changed
+
+- `grep` tool in working-tree mode now shells out to `git grep -E` instead of iterating files via `vscode.workspace.findFiles` and JS `RegExp`. Removes the FS-mode vs ref-mode glob-syntax mismatch (both now use git pathspecs) and scales to large repos that previously made grep dominate the agent loop. Untracked files are no longer searched in either mode.
+- Webview Submit button now allows submitting an `APPROVE` decision with zero selected findings (e.g. the agent returned no findings). `COMMENT` and `REQUEST_CHANGES` still require at least one selected finding so the review isn't empty. The decision dropdown now re-renders the toolbar so the button state tracks the choice.
+
+### Fixed
+
+- `suggestedFix` blocks in both the inline comment body and the review-body markdown now use an escalated backtick fence (via `pickFence`) when the fix itself contains ` ``` `. Previously a fix that included a triple-backtick run would close the surrounding fence early and break formatting on GitHub.
+
+### Added
+
+- Unit tests for `renderCommentBody` (`src/test/unit/github/renderCommentBody.test.ts`) and `renderReviewBody` (`src/test/unit/commands/renderReviewBody.test.ts`) covering default fencing and escalation when the suggested fix contains backtick runs.
+
+### Internal
+
+- New `grepWorkingTree` helper in `src/git/refRead.ts` mirrors `grepAtRef` for the no-ref path; both pass the pattern via `-e` so a `-`-prefixed pattern can't be misread as a git option.
+
 ## [0.1.3] - 2026-05-24
 
 ### Changed

@@ -98,3 +98,52 @@ export async function grepAtRef(
     }
     return rows;
 }
+
+/**
+ * Working-tree equivalent of `grepAtRef`: `git grep` against the index (tracked
+ * files only), no ref argument. Output is `<path>:<line>:<content>` — matches
+ * the line format `grepAtRef` returns after stripping its ref prefix, so the
+ * tool layer can treat both modes uniformly.
+ *
+ * Pattern is passed via `-e` to defend against patterns that start with `-`.
+ */
+export async function grepWorkingTree(
+    cwd: string,
+    pattern: string,
+    pathspec: string | undefined,
+    maxResults: number,
+): Promise<string[]> {
+    const args = [
+        'grep',
+        '-n',
+        '-E',
+        '--no-color',
+        `-m${Math.max(1, Math.min(maxResults, 50))}`,
+        '-e',
+        pattern,
+    ];
+    if (pathspec) {
+        args.push('--', pathspec);
+    }
+    let out: string;
+    try {
+        out = await git(args, { cwd });
+    } catch (err) {
+        const e = err as { code?: number };
+        if (e.code === 1) {
+            return [];
+        }
+        throw err;
+    }
+    const rows: string[] = [];
+    for (const line of out.split(/\r?\n/)) {
+        if (!line) {
+            continue;
+        }
+        rows.push(line);
+        if (rows.length >= maxResults) {
+            break;
+        }
+    }
+    return rows;
+}

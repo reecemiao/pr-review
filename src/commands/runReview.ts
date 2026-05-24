@@ -351,7 +351,7 @@ async function copyAsMarkdown(
     vscode.window.showInformationMessage('Review copied to clipboard.');
 }
 
-function renderReviewBody(
+export function renderReviewBody(
     summary: string,
     findings: Finding[],
     decision?: ReviewDecision,
@@ -367,12 +367,16 @@ function renderReviewBody(
             .join(' · ') || 'no findings';
     const header = decision ? `**Decision:** ${decision}\n\n` : '';
     const body = findings
-        .map(
-            (f) =>
-                `### [${f.severity}] ${f.title} — \`${f.file}:${f.line}\`\n\n${f.body}${
-                    f.suggestedFix ? `\n\n\`\`\`\n${f.suggestedFix}\n\`\`\`` : ''
-                }`,
-        )
+        .map((f) => {
+            let fixBlock = '';
+            if (f.suggestedFix) {
+                // Escalate the fence so a fix containing ``` doesn't close
+                // the surrounding block prematurely.
+                const fence = pickFence(f.suggestedFix);
+                fixBlock = `\n\n${fence}\n${f.suggestedFix}\n${fence}`;
+            }
+            return `### [${f.severity}] ${f.title} — \`${f.file}:${f.line}\`\n\n${f.body}${fixBlock}`;
+        })
         .join('\n\n');
     // GitHub rejects inline comments outside the diff hunks, so any such
     // findings are surfaced as plain prose at the bottom of the review body.

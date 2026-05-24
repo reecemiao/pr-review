@@ -87,7 +87,7 @@ This is the safe way to review a PR from the right-click menu without disturbing
 - The GitHub PR extension's tree-node shape isn't public API. PR-number extraction probes `pullRequestModel.number`, `pullRequest.number`, `item.number`, `prNumber`, `number`. If none match, an `InputBox` asks you for the PR number — the right-click flow still works, just with one extra dialog.
 - In worktree mode, "open file at line" opens the file from the temp worktree directory rather than the workspace folder — line numbers align with the review, but the editor opens outside the workspace tree so workspace-scoped features (project-wide find, file explorer focus) won't include it.
 - `branch-checkout` on a remote ref like `origin/foo` may detach HEAD (depending on your git version); the review itself still works. Use a local branch name to avoid this.
-- The `grep` tool uses a glob pattern in FS mode but `git grep` pathspecs in ref mode — they aren't quite the same syntax. Stick to simple paths (`src/`, `*.py`) for portability.
+- The `grep` tool searches tracked files via `git grep` (the workspace must be a git repo). Untracked files are not searched; use `readFile` for those.
 - Agent loops are bounded by `prReview.maxAgentIterations`. If you see "Agent did not terminate within N iterations," raise it or check the Copilot logs.
 
 ## Development
