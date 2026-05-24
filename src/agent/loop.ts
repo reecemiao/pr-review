@@ -105,36 +105,53 @@ export async function runAgent(input: AgentRunInput): Promise<AgentRunResult> {
             };
         }
 
-        // Append assistant turn with tool calls and the corresponding user turn with tool results.
-        messages.push(vscode.LanguageModelChatMessage.Assistant([...toolCalls]));
-
-        const resultParts: vscode.LanguageModelToolResultPart[] = [];
-        for (const call of toolCalls) {
-            onProgress?.(`Calling ${call.name}`);
-            const tool = toolByName.get(call.name);
-            const callStartedAt = Date.now();
-            logDebug(`agent: tool ${call.name} input:`, call.input);
-            let resultText: string;
-            try {
-                if (!tool) {
-                    resultText = `error: unknown tool "${call.name}"`;
-                } else {
-                    resultText = await tool.invoke(call.input, ctx, token);
-                }
-                log(
-                    `agent: tool ${call.name} -> ${resultText.length}b in ${Date.now() - callStartedAt}ms`,
-                );
-            } catch (err) {
-                resultText = `error: ${err instanceof Error ? err.message : String(err)}`;
-                logError(`agent: tool ${call.name} threw`, err);
-            }
-            logDebug(`agent: tool ${call.name} result:\n` + resultText);
-            resultParts.push(
-                new vscode.LanguageModelToolResultPart(call.callId, [
-                    new vscode.LanguageModelTextPart(resultText),
-                ]),
-            );
+        // Append assistant turn with the model's prose (if any) AND its tool
+        // calls, then the corresponding user turn with the tool results.
+        // Including the prose keeps the model's mid-loop reasoning in history
+        // so subsequent iterations don't repeat work or lose track of intent.
+        const assistantParts: (vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart)[] =
+            [];
+        const assistantText = textParts.join('').trim();
+        if (assistantText) {
+            assistantParts.push(new vscode.LanguageModelTextPart(assistantText));
         }
+        assistantParts.push(...toolCalls);
+        messages.push(vscode.LanguageModelChatMessage.Assistant(assistantParts));
+
+        onProgress?.(
+            toolCalls.length === 1
+                ? `Calling ${toolCalls[0].name}`
+                : `Calling ${toolCalls.length} tools in parallel`,
+        );
+
+        // Run all tool calls concurrently. Each call still produces a
+        // ToolResultPart keyed by callId, so the order returned to the model
+        // matches the order the model emitted the calls.
+        const resultParts = await Promise.all(
+            toolCalls.map(async (call) => {
+                const tool = toolByName.get(call.name);
+                const callStartedAt = Date.now();
+                logDebug(`agent: tool ${call.name} input:`, call.input);
+                let resultText: string;
+                try {
+                    if (!tool) {
+                        resultText = `error: unknown tool "${call.name}"`;
+                    } else {
+                        resultText = await tool.invoke(call.input, ctx, token);
+                    }
+                    log(
+                        `agent: tool ${call.name} -> ${resultText.length}b in ${Date.now() - callStartedAt}ms`,
+                    );
+                } catch (err) {
+                    resultText = `error: ${err instanceof Error ? err.message : String(err)}`;
+                    logError(`agent: tool ${call.name} threw`, err);
+                }
+                logDebug(`agent: tool ${call.name} result:\n` + resultText);
+                return new vscode.LanguageModelToolResultPart(call.callId, [
+                    new vscode.LanguageModelTextPart(resultText),
+                ]);
+            }),
+        );
         messages.push(vscode.LanguageModelChatMessage.User(resultParts));
 
         const captured = getResult();
