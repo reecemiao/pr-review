@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-05-24
+
 ### Changed
 
 - Agent loop now preserves the model's prose alongside its tool calls in the assistant turn (previously dropped). Mid-loop reasoning stays in history so subsequent iterations don't repeat work or lose track of intent.
@@ -26,6 +28,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 - README development section refreshed for the bundled build: new `bundle` / `bundle:prod` / `watch:bundle` / `verify` scripts documented, project layout includes `dist/`, `esbuild.mjs`, and the test directory tree, and a new subsection describes how the agent loop spends its iteration budget.
 - README settings table documents the existing `prReview.debugLog` boolean; the stale "worktree open-file uses main workspace" known-limitation bullet has been replaced with an accurate note about the editor opening outside the workspace tree.
+- Bumped `actions/upload-artifact` from `@v5` to `@v7` in both CI and release workflows. v5 still pinned to Node.js 20, which GitHub flips to Node 24 as default on 2026-06-02 and removes entirely on 2026-09-16. v7 runs on Node 24 and only adds an optional `archive` parameter we don't use.
 
 ## [0.1.2] - 2026-05-24
 
