@@ -10,6 +10,18 @@ export interface ToolContext {
      * branch than the PR being reviewed.
      */
     ref?: string;
+    /**
+     * Files touched by the diff under review. The linter tool scopes its
+     * invocation to these (filtered by extension) instead of running across
+     * the whole workspace.
+     */
+    changedFiles?: string[];
+    /**
+     * Per-review read cache. `readFile` and `gitShow` write to it after
+     * the first hit so subsequent iterations don't re-fetch the same blob.
+     * Lifetime is one review — runReview allocates a fresh map.
+     */
+    cache?: Map<string, string>;
 }
 
 export interface AgentTool {
