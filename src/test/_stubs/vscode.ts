@@ -2,8 +2,13 @@
 // Tests that exercise vscode-dependent code paths should mock individual APIs they touch.
 export const Uri = {
     file: (p: string) => ({ fsPath: p, scheme: 'file', path: p }),
-    joinPath: (..._args: unknown[]) => {
-        throw new Error('vscode.Uri.joinPath not implemented in unit-test stub');
+    // Forward-slash-only join so tests can assert deterministic paths across
+    // platforms. VS Code's real Uri.joinPath also normalizes to forward
+    // slashes for the URI `path`; we mirror that for `fsPath` too so tests
+    // don't have to special-case Windows separators.
+    joinPath: (base: { fsPath: string }, ...segments: string[]) => {
+        const joined = [base.fsPath.replace(/\/$/, ''), ...segments].join('/');
+        return { fsPath: joined, scheme: 'file', path: joined };
     },
 };
 

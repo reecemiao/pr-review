@@ -74,6 +74,11 @@ function registerPrCommand(
 
 async function runReviewBranchFlow(context: vscode.ExtensionContext): Promise<void> {
     try {
+        // TODO(multi-repo): picks folder[0]. Fine for same-repo multi-root
+        // (all folders resolve to one git root, one branch list). For two
+        // unrelated repos as multi-root the user should choose which repo
+        // to enumerate branches from — probably via the active editor's URI
+        // or a QuickPick of workspace folders.
         const folder = vscode.workspace.workspaceFolders?.[0];
         if (!folder) {
             throw new Error('Open a workspace folder first.');
@@ -163,6 +168,10 @@ function showErr(err: unknown): void {
 }
 
 async function runReview(context: vscode.ExtensionContext, input: ResolveInput): Promise<void> {
+    // TODO(multi-repo): picks folder[0] for the review's git context. Fine for
+    // single-root and for same-repo multi-root (every folder resolves to the
+    // same git root anyway). For two unrelated repos as multi-root we'd want
+    // to pick the repo from the active editor's URI or prompt the user.
     const folder = vscode.workspace.workspaceFolders?.[0];
     if (!folder) {
         throw new Error('Open a workspace folder first.');
@@ -209,7 +218,10 @@ async function runReviewCore(
     progress.report({ message: 'Loading review template…' });
     const template = await loadTemplate(
         context.extensionUri,
-        target.workspaceUri,
+        // Resolve `prReview.extraInstructions` paths against the git root,
+        // not the workspace folder. Keeps the setting working when the
+        // workspace is opened at a repo subdirectory (monorepo case).
+        vscode.Uri.file(target.cwd),
         diffResult.changedFiles,
     );
     log(`review: template languages=[${template.languages.join(',') || 'generic'}]`);

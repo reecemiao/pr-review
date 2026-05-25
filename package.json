@@ -130,7 +130,7 @@
                 "prReview.extraInstructions": {
                     "type": "object",
                     "default": {},
-                    "description": "Extra instruction markdown files appended per language, e.g. { \"python\": \"./team-python.md\" }. Paths are resolved relative to the workspace folder.",
+                    "description": "Extra instruction markdown files appended per language, e.g. { \"python\": \"./.review/team-python.md\" }. Paths are resolved relative to the git repo root (so the same setting works whether VS Code is opened at the repo root or a subdirectory).",
                     "additionalProperties": {
                         "type": "string"
                     }
