@@ -10,7 +10,7 @@ const eslintDef = {
 
 const ruffDef = {
     args: ['check', '.'],
-    extensions: ['.py'],
+    extensions: ['.py', '.pyi'],
     scopedArgs: (files: string[]) => ['check', ...files],
 };
 
@@ -41,5 +41,10 @@ describe('pickArgs', () => {
 
     it('matches extensions case-insensitively', () => {
         expect(pickArgs(eslintDef, ['src/Foo.TS', 'README.md'])).toEqual(['src/Foo.TS']);
+    });
+
+    it('scopes ruff to .pyi stub files alongside .py', () => {
+        const files = ['app/main.py', 'app/types.pyi', 'README.md'];
+        expect(pickArgs(ruffDef, files)).toEqual(['check', 'app/main.py', 'app/types.pyi']);
     });
 });

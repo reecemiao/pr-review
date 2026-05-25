@@ -24,17 +24,21 @@ interface LinterDef {
 const LINTERS: Record<string, LinterDef> = {
     ruff: {
         args: ['check', '.'],
-        extensions: ['.py'],
+        // `.pyi` stub files are valid ruff/mypy targets; bandit reads them
+        // too (it just won't find runtime issues since stubs have no
+        // implementation). Including stubs avoids skipping the linter when
+        // a PR only touches `.pyi` files.
+        extensions: ['.py', '.pyi'],
         scopedArgs: (files) => ['check', ...files],
     },
     mypy: {
         args: ['.'],
-        extensions: ['.py'],
+        extensions: ['.py', '.pyi'],
         scopedArgs: (files) => files,
     },
     bandit: {
         args: ['-r', '.'],
-        extensions: ['.py'],
+        extensions: ['.py', '.pyi'],
         // bandit accepts file paths directly (recursion isn't needed for individual files).
         scopedArgs: (files) => files,
     },

@@ -64,8 +64,8 @@ All settings live under the `prReview.*` prefix.
 
 Bundled in `templates/`:
 
-- `python-reviewer.md` — PEP 8, type hints, Pythonic patterns, security (SQL/command injection, eval/exec, weak crypto), framework checks (Django / FastAPI / Flask).
-- `typescript-reviewer.md` — type safety, async correctness, XSS / prototype pollution, idioms.
+- `python-reviewer.md` — PEP 8, type hints, Pythonic patterns, security (SQL/command injection, eval/exec, weak crypto), framework checks (Django / FastAPI / Flask). Triggered by `.py` and `.pyi` (stub) files.
+- `typescript-reviewer.md` — type safety, async correctness, XSS / prototype pollution, idioms. Triggered by `.ts` / `.tsx` / `.js` / `.jsx` / `.mjs` / `.cjs`.
 - `generic-reviewer.md` — language-agnostic fallback.
 
 The template loader picks one (or more) based on extensions of the changed files. If `prReview.extraInstructions[lang]` is set, the contents of that file are appended after the bundled template. Both layers are prepended to the agent's system prompt.
