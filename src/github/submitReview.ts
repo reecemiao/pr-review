@@ -1,6 +1,7 @@
 import { getOctokit } from './client';
 import { type DiffIndex, findSide } from '../git/diffIndex';
 import { type Finding, type ReviewDecision } from '../types';
+import { pickFence } from '../util/markdownFence';
 
 export interface SubmitReviewInput {
     owner: string;
@@ -79,8 +80,14 @@ export async function submitReview(
     return { id: data.id, htmlUrl: data.html_url };
 }
 
-function renderCommentBody(f: Finding): string {
+export function renderCommentBody(f: Finding): string {
     const head = `**[${f.severity}] ${f.title}**`;
-    const fix = f.suggestedFix ? `\n\n_Suggested fix:_\n\`\`\`\n${f.suggestedFix}\n\`\`\`` : '';
+    let fix = '';
+    if (f.suggestedFix) {
+        // Escalate the fence so a fix that itself contains ``` doesn't close
+        // the surrounding block early on GitHub's markdown renderer.
+        const fence = pickFence(f.suggestedFix);
+        fix = `\n\n_Suggested fix:_\n${fence}\n${f.suggestedFix}\n${fence}`;
+    }
     return `${head}\n\n${f.body}${fix}`;
 }

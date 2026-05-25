@@ -37,9 +37,9 @@ async function readBundled(extensionUri: vscode.Uri, file: string): Promise<stri
     return new TextDecoder('utf-8').decode(bytes);
 }
 
-async function readWorkspaceFile(workspace: vscode.Uri, relPath: string): Promise<string | null> {
+async function readRepoFile(gitRoot: vscode.Uri, relPath: string): Promise<string | null> {
     try {
-        const uri = vscode.Uri.joinPath(workspace, relPath);
+        const uri = vscode.Uri.joinPath(gitRoot, relPath);
         const bytes = await vscode.workspace.fs.readFile(uri);
         return new TextDecoder('utf-8').decode(bytes);
     } catch {
@@ -76,9 +76,19 @@ export interface LoadedTemplate {
     languages: string[];
 }
 
+/**
+ * Build the agent's system prompt.
+ *
+ *  - `extensionUri` is where the bundled `templates/*.md` files live.
+ *  - `gitRoot` is the repo's top-level. `prReview.extraInstructions` values
+ *    are resolved relative to this — NOT the VS Code workspace folder —
+ *    so the same setting works whether the user opens the repo root or a
+ *    subdirectory (monorepo case), and so all roots in a multi-root
+ *    workspace see the same file when they share a repo.
+ */
 export async function loadTemplate(
     extensionUri: vscode.Uri,
-    workspace: vscode.Uri,
+    gitRoot: vscode.Uri,
     changedFiles: string[],
 ): Promise<LoadedTemplate> {
     const languages = detectLanguages(changedFiles);
@@ -96,7 +106,7 @@ export async function loadTemplate(
             }
             const extra = extras[lang];
             if (extra) {
-                const content = await readWorkspaceFile(workspace, extra);
+                const content = await readRepoFile(gitRoot, extra);
                 if (content) {
                     parts.push(`\n\n## Additional instructions (${lang})\n\n${content}`);
                 }

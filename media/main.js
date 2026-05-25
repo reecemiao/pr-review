@@ -52,6 +52,9 @@
         }
         decisionSelect.addEventListener('change', () => {
             state.decision = decisionSelect.value;
+            // Re-render so the submit button's enabled state reflects the
+            // new decision (APPROVE allows empty-selection submit).
+            render();
         });
         decisionLabel.appendChild(decisionSelect);
         toolbar.appendChild(decisionLabel);
@@ -62,11 +65,16 @@
             : noPr
               ? 'Submit (no open PR)'
               : 'Submit to GitHub';
-        submitBtn.disabled =
-            noPr || state.selected.size === 0 || state.submitting || state.submitted;
+        // APPROVE with zero selected is a valid clean approval (especially
+        // when the agent returns no findings). For COMMENT / REQUEST_CHANGES
+        // require at least one comment so the review isn't empty.
+        const emptyAndNotApproving = state.selected.size === 0 && state.decision !== 'APPROVE';
+        submitBtn.disabled = noPr || state.submitting || state.submitted || emptyAndNotApproving;
         if (noPr) submitBtn.title = `Push the branch and open a PR to enable submission.`;
         else if (state.submitted)
             submitBtn.title = 'Review already submitted. Close and re-run to submit again.';
+        else if (emptyAndNotApproving)
+            submitBtn.title = 'Select at least one finding, or switch the decision to APPROVE.';
         submitBtn.addEventListener('click', () => {
             if (state.submitting || state.submitted) return;
             state.submitting = true;

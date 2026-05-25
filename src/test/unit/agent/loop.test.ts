@@ -20,7 +20,6 @@ const noopToken: vscode.CancellationToken = {
 };
 
 const mockCtx: ToolContext = {
-    workspace: {} as vscode.Uri,
     cwd: '/tmp',
     ref: undefined,
     changedFiles: [],

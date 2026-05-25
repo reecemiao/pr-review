@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { getBaseBranch } from '../config/settings';
-import { getCurrentBranch, getOriginRepoSlug, type RepoSlug } from '../git/branch';
+import { getCurrentBranch, getGitRoot, getOriginRepoSlug, type RepoSlug } from '../git/branch';
 import {
     checkoutRef,
     checkoutTrackingBranch,
@@ -17,8 +17,12 @@ import { type ReviewMode } from '../types';
 /**
  * Everything mode-specific that the shared review pipeline needs.
  *
- *  - `cwd` is where git subprocess commands run.
- *  - `workspaceUri` is what tools use to read paths (FS-mode tools).
+ *  - `cwd` is where git subprocess commands run AND the base path for FS-mode
+ *    tool reads. It is always the git repo (or worktree) top-level — never a
+ *    workspace subdirectory — so git-root-relative paths from the diff resolve
+ *    correctly even in monorepo setups where the user opens a single package.
+ *  - `workspaceUri` is the VS Code workspace folder. Used by the review panel
+ *    for display only; tools no longer key off it.
  *  - `refForTools` is set in `pr-no-checkout` / `branch-no-checkout`: tools read
  *    at this ref via git plumbing instead of the working tree, so the model
  *    sees the target state even though the workspace is on a different branch.
@@ -54,7 +58,14 @@ export async function resolveTarget(
     folder: vscode.WorkspaceFolder,
     progress: (msg: string) => void,
 ): Promise<ResolvedTarget> {
-    const cwd = folder.uri.fsPath;
+    // Run git from the repo's top-level (or the worktree root) rather than
+    // the workspace folder. Monorepo case: the user opens
+    // `/repo/packages/web` in VS Code; `git rev-parse --show-toplevel` from
+    // there returns `/repo`, and tools that resolve `packages/web/src/foo.ts`
+    // (the path the diff prints) find the file. Without this they'd try to
+    // open `/repo/packages/web/packages/web/src/foo.ts` and ENOENT.
+    const initialCwd = folder.uri.fsPath;
+    const cwd = await getGitRoot(initialCwd);
     const repo = await getOriginRepoSlug(cwd);
 
     switch (input.mode) {

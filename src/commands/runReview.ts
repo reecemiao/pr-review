@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import * as vscode from 'vscode';
 
 import { resolveTarget, type ResolvedTarget, type ResolveInput } from './modes';
@@ -72,6 +74,11 @@ function registerPrCommand(
 
 async function runReviewBranchFlow(context: vscode.ExtensionContext): Promise<void> {
     try {
+        // TODO(multi-repo): picks folder[0]. Fine for same-repo multi-root
+        // (all folders resolve to one git root, one branch list). For two
+        // unrelated repos as multi-root the user should choose which repo
+        // to enumerate branches from — probably via the active editor's URI
+        // or a QuickPick of workspace folders.
         const folder = vscode.workspace.workspaceFolders?.[0];
         if (!folder) {
             throw new Error('Open a workspace folder first.');
@@ -161,6 +168,10 @@ function showErr(err: unknown): void {
 }
 
 async function runReview(context: vscode.ExtensionContext, input: ResolveInput): Promise<void> {
+    // TODO(multi-repo): picks folder[0] for the review's git context. Fine for
+    // single-root and for same-repo multi-root (every folder resolves to the
+    // same git root anyway). For two unrelated repos as multi-root we'd want
+    // to pick the repo from the active editor's URI or prompt the user.
     const folder = vscode.workspace.workspaceFolders?.[0];
     if (!folder) {
         throw new Error('Open a workspace folder first.');
@@ -207,7 +218,10 @@ async function runReviewCore(
     progress.report({ message: 'Loading review template…' });
     const template = await loadTemplate(
         context.extensionUri,
-        target.workspaceUri,
+        // Resolve `prReview.extraInstructions` paths against the git root,
+        // not the workspace folder. Keeps the setting working when the
+        // workspace is opened at a repo subdirectory (monorepo case).
+        vscode.Uri.file(target.cwd),
         diffResult.changedFiles,
     );
     log(`review: template languages=[${template.languages.join(',') || 'generic'}]`);
@@ -237,7 +251,9 @@ async function runReviewCore(
         model,
         tools,
         ctx: {
-            workspace: target.workspaceUri,
+            // target.cwd is the git root (or worktree root) — all tool path
+            // resolution and git invocations route through it. See
+            // ResolvedTarget.cwd in commands/modes.ts.
             cwd: target.cwd,
             ref: target.refForTools,
             changedFiles: diffResult.changedFiles,
@@ -262,7 +278,10 @@ async function runReviewCore(
     };
 
     const panel = ReviewPanel.create(context.extensionUri, result, {
-        onOpenFile: (file, line) => openFileAt(target.workspaceUri, file, line),
+        // `file` from a finding is git-root-relative; resolve from cwd
+        // (= git root) so the editor opens the correct path in monorepos
+        // where the workspace folder is a subdirectory of the repo.
+        onOpenFile: (file, line) => openFileAt(target.cwd, file, line),
         onCopyMarkdown: (findings, decision, summary) =>
             copyAsMarkdown(findings, decision, summary),
         onSubmit: async (payload) => {
@@ -331,8 +350,8 @@ function buildUserPrompt(
     ].join('\n');
 }
 
-async function openFileAt(workspace: vscode.Uri, file: string, line: number): Promise<void> {
-    const uri = vscode.Uri.joinPath(workspace, file);
+async function openFileAt(gitRoot: string, file: string, line: number): Promise<void> {
+    const uri = vscode.Uri.file(path.join(gitRoot, file));
     const doc = await vscode.workspace.openTextDocument(uri);
     const pos = new vscode.Position(Math.max(0, line - 1), 0);
     await vscode.window.showTextDocument(doc, {
@@ -351,7 +370,7 @@ async function copyAsMarkdown(
     vscode.window.showInformationMessage('Review copied to clipboard.');
 }
 
-function renderReviewBody(
+export function renderReviewBody(
     summary: string,
     findings: Finding[],
     decision?: ReviewDecision,
@@ -367,12 +386,16 @@ function renderReviewBody(
             .join(' · ') || 'no findings';
     const header = decision ? `**Decision:** ${decision}\n\n` : '';
     const body = findings
-        .map(
-            (f) =>
-                `### [${f.severity}] ${f.title} — \`${f.file}:${f.line}\`\n\n${f.body}${
-                    f.suggestedFix ? `\n\n\`\`\`\n${f.suggestedFix}\n\`\`\`` : ''
-                }`,
-        )
+        .map((f) => {
+            let fixBlock = '';
+            if (f.suggestedFix) {
+                // Escalate the fence so a fix containing ``` doesn't close
+                // the surrounding block prematurely.
+                const fence = pickFence(f.suggestedFix);
+                fixBlock = `\n\n${fence}\n${f.suggestedFix}\n${fence}`;
+            }
+            return `### [${f.severity}] ${f.title} — \`${f.file}:${f.line}\`\n\n${f.body}${fixBlock}`;
+        })
         .join('\n\n');
     // GitHub rejects inline comments outside the diff hunks, so any such
     // findings are surfaced as plain prose at the bottom of the review body.
