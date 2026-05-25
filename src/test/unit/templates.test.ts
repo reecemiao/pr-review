@@ -13,6 +13,10 @@ describe('detectLanguages', () => {
         expect(detectLanguages(['src/app.py'])).toEqual(['python']);
     });
 
+    it('detects python from .pyi stub files', () => {
+        expect(detectLanguages(['src/types.pyi'])).toEqual(['python']);
+    });
+
     it('detects typescript from .ts/.tsx/.js/.jsx/.mjs/.cjs files', () => {
         for (const ext of ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']) {
             expect(detectLanguages([`foo${ext}`])).toEqual(['typescript']);

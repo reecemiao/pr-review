@@ -6,6 +6,10 @@ import { getExtraInstructions } from '../config/settings';
 
 const EXT_TO_LANG: Record<string, string> = {
     '.py': 'python',
+    // `.pyi` stub files are first-class Python — mypy/ruff/pyright all
+    // treat them as source. Without this, a PR touching only stubs would
+    // fall through to the generic reviewer.
+    '.pyi': 'python',
     '.ts': 'typescript',
     '.tsx': 'typescript',
     '.js': 'typescript',
