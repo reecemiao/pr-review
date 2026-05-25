@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import * as vscode from 'vscode';
 
 import { type AgentTool, clampOutput } from './types';
@@ -11,11 +13,11 @@ export const listDirTool: AgentTool = {
     spec: {
         name: 'listDir',
         description:
-            'List the entries of a workspace directory (workspace-relative path). When a review ref is in effect, the listing comes from git at that ref.',
+            'List the entries of a directory. Paths are relative to the git repo root. When a review ref is in effect, the listing comes from git at that ref.',
         inputSchema: {
             type: 'object',
             properties: {
-                path: { type: 'string', description: 'Workspace-relative directory path' },
+                path: { type: 'string', description: 'Git-root-relative directory path' },
             },
             required: ['path'],
         },
@@ -26,7 +28,7 @@ export const listDirTool: AgentTool = {
             const rows = await lsTreeAtRef(ctx.cwd, ctx.ref, input.path);
             return clampOutput(rows.join('\n'));
         }
-        const uri = vscode.Uri.joinPath(ctx.workspace, input.path);
+        const uri = vscode.Uri.file(path.join(ctx.cwd, input.path));
         const entries = await vscode.workspace.fs.readDirectory(uri);
         const lines = entries.map(([name, kind]) => {
             const t =

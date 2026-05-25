@@ -13,14 +13,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 ### Fixed
 
 - `suggestedFix` blocks in both the inline comment body and the review-body markdown now use an escalated backtick fence (via `pickFence`) when the fix itself contains ` ``` `. Previously a fix that included a triple-backtick run would close the surrounding fence early and break formatting on GitHub.
+- Monorepo path resolution. `readFile`, `listDir`, and "open file at line" now resolve paths against the git repo root (via `git rev-parse --show-toplevel`) instead of the VS Code workspace folder. Previously, when the workspace was opened at a subdirectory (e.g. `/repo/packages/web`), tool calls citing the git-root-relative paths printed by `git diff` (e.g. `packages/web/src/foo.ts`) failed with `ENOENT` because the URI was joined with the workspace subdir.
 
 ### Added
 
 - Unit tests for `renderCommentBody` (`src/test/unit/github/renderCommentBody.test.ts`) and `renderReviewBody` (`src/test/unit/commands/renderReviewBody.test.ts`) covering default fencing and escalation when the suggested fix contains backtick runs.
+- Unit tests for `readFile` and `listDir` path resolution (`src/test/unit/agent/tools/pathResolution.test.ts`) verifying that relative paths are joined against the git root rather than a workspace subdirectory.
 
 ### Internal
 
-- New `grepWorkingTree` helper in `src/git/refRead.ts` mirrors `grepAtRef` for the no-ref path; both pass the pattern via `-e` so a `-`-prefixed pattern can't be misread as a git option.
+- New `grepWorkingTree` helper in `src/git/refRead.ts` mirrors `grepAtRef` for the no-ref path; both pass the pattern via `-e` so a `-`-prefixed pattern can't be misread as a git option, and both add `--full-name` so `git grep` paths are always repo-root relative.
+- `ToolContext.workspace` removed. Tools now key off `ctx.cwd` (always the git root, set by `resolveTarget`) for both subprocess cwd and FS path resolution. The vscode test stub gained `Uri.file`, `FileType`, and `workspace.fs.readDirectory` to support the new path-resolution unit tests.
 
 ## [0.1.3] - 2026-05-24
 

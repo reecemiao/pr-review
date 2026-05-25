@@ -64,6 +64,10 @@ export async function grepAtRef(
         '-n',
         '-E',
         '--no-color',
+        // `--full-name` keeps output paths repo-root-relative even when git
+        // is invoked from a subdirectory. Tools resolve paths from the repo
+        // root, so this matters when callers haven't already pinned cwd to it.
+        '--full-name',
         // Per-file match cap. Most callers ask for ~100 total results, so 50 per
         // file is plenty without letting one noisy file flood the buffer.
         `-m${Math.max(1, Math.min(maxResults, 50))}`,
@@ -118,6 +122,7 @@ export async function grepWorkingTree(
         '-n',
         '-E',
         '--no-color',
+        '--full-name',
         `-m${Math.max(1, Math.min(maxResults, 50))}`,
         '-e',
         pattern,

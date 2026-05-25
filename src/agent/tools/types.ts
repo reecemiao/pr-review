@@ -1,7 +1,13 @@
 import type * as vscode from 'vscode';
 
 export interface ToolContext {
-    workspace: vscode.Uri;
+    /**
+     * The git repo's top-level (or worktree root). Used both as the working
+     * directory for git subprocesses AND as the base for FS-mode path joins
+     * in `readFile` / `listDir`. Always the git root — never a workspace
+     * subdirectory — so git-root-relative paths from the diff resolve in
+     * monorepo setups where the user opens a single package in VS Code.
+     */
     cwd: string;
     /**
      * When set, ref-aware tools (readFile / listDir / grep) read from git's

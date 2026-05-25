@@ -5,6 +5,19 @@ export async function getCurrentBranch(cwd: string): Promise<string> {
     return out.trim();
 }
 
+/**
+ * Resolve the absolute path of the repo's top-level (or the worktree root if
+ * `cwd` is inside a worktree). Used as the base for all path resolution in
+ * tools so a model that hands back a git-root-relative path (matching what
+ * `git diff --name-only` produces) still finds the file when the VS Code
+ * workspace folder is a subdirectory of the repo — e.g. monorepos where the
+ * user opens a single package.
+ */
+export async function getGitRoot(cwd: string): Promise<string> {
+    const out = await git(['rev-parse', '--show-toplevel'], { cwd });
+    return out.trim();
+}
+
 export async function getMergeBase(cwd: string, base: string, head = 'HEAD'): Promise<string> {
     const out = await git(['merge-base', base, head], { cwd });
     return out.trim();

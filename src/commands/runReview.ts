@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import * as vscode from 'vscode';
 
 import { resolveTarget, type ResolvedTarget, type ResolveInput } from './modes';
@@ -237,7 +239,9 @@ async function runReviewCore(
         model,
         tools,
         ctx: {
-            workspace: target.workspaceUri,
+            // target.cwd is the git root (or worktree root) — all tool path
+            // resolution and git invocations route through it. See
+            // ResolvedTarget.cwd in commands/modes.ts.
             cwd: target.cwd,
             ref: target.refForTools,
             changedFiles: diffResult.changedFiles,
@@ -262,7 +266,10 @@ async function runReviewCore(
     };
 
     const panel = ReviewPanel.create(context.extensionUri, result, {
-        onOpenFile: (file, line) => openFileAt(target.workspaceUri, file, line),
+        // `file` from a finding is git-root-relative; resolve from cwd
+        // (= git root) so the editor opens the correct path in monorepos
+        // where the workspace folder is a subdirectory of the repo.
+        onOpenFile: (file, line) => openFileAt(target.cwd, file, line),
         onCopyMarkdown: (findings, decision, summary) =>
             copyAsMarkdown(findings, decision, summary),
         onSubmit: async (payload) => {
@@ -331,8 +338,8 @@ function buildUserPrompt(
     ].join('\n');
 }
 
-async function openFileAt(workspace: vscode.Uri, file: string, line: number): Promise<void> {
-    const uri = vscode.Uri.joinPath(workspace, file);
+async function openFileAt(gitRoot: string, file: string, line: number): Promise<void> {
+    const uri = vscode.Uri.file(path.join(gitRoot, file));
     const doc = await vscode.workspace.openTextDocument(uri);
     const pos = new vscode.Position(Math.max(0, line - 1), 0);
     await vscode.window.showTextDocument(doc, {

@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import * as vscode from 'vscode';
 
 import { type AgentTool, clampOutput } from './types';
@@ -13,11 +15,11 @@ export const readFileTool: AgentTool = {
     spec: {
         name: 'readFile',
         description:
-            'Read the contents of a workspace file. Optionally restrict to a line range. Paths are workspace-relative. When a review ref is in effect, reads come from git at that ref (not the working tree).',
+            'Read the contents of a workspace file. Optionally restrict to a line range. Paths are relative to the git repo root (matching what the diff prints). When a review ref is in effect, reads come from git at that ref (not the working tree).',
         inputSchema: {
             type: 'object',
             properties: {
-                path: { type: 'string', description: 'Workspace-relative path' },
+                path: { type: 'string', description: 'Git-root-relative path' },
                 startLine: { type: 'integer', minimum: 1 },
                 endLine: { type: 'integer', minimum: 1 },
             },
@@ -41,7 +43,6 @@ export const readFileTool: AgentTool = {
 
 async function readText(
     ctx: {
-        workspace: vscode.Uri;
         cwd: string;
         ref?: string;
         cache?: Map<string, string>;
@@ -58,7 +59,7 @@ async function readText(
     const text = ctx.ref
         ? await showFileAtRef(ctx.cwd, ctx.ref, relPath)
         : new TextDecoder('utf-8').decode(
-              await vscode.workspace.fs.readFile(vscode.Uri.joinPath(ctx.workspace, relPath)),
+              await vscode.workspace.fs.readFile(vscode.Uri.file(path.join(ctx.cwd, relPath))),
           );
     ctx.cache?.set(cacheKey, text);
     return text;
