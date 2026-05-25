@@ -5,22 +5,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this pr
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-25
+
 ### Changed
 
 - `grep` tool in working-tree mode now shells out to `git grep -E` instead of iterating files via `vscode.workspace.findFiles` and JS `RegExp`. Removes the FS-mode vs ref-mode glob-syntax mismatch (both now use git pathspecs) and scales to large repos that previously made grep dominate the agent loop. Untracked files are no longer searched in either mode.
 - Webview Submit button now allows submitting an `APPROVE` decision with zero selected findings (e.g. the agent returned no findings). `COMMENT` and `REQUEST_CHANGES` still require at least one selected finding so the review isn't empty. The decision dropdown now re-renders the toolbar so the button state tracks the choice.
+- `.pyi` stub files are now detected as Python alongside `.py`, so a PR touching only stubs gets the python-reviewer template and ruff/mypy/bandit scope to the stub files instead of skipping them or falling back to whole-repo args.
 
 ### Fixed
 
 - `suggestedFix` blocks in both the inline comment body and the review-body markdown now use an escalated backtick fence (via `pickFence`) when the fix itself contains ` ``` `. Previously a fix that included a triple-backtick run would close the surrounding fence early and break formatting on GitHub.
 - Monorepo path resolution. `readFile`, `listDir`, and "open file at line" now resolve paths against the git repo root (via `git rev-parse --show-toplevel`) instead of the VS Code workspace folder. Previously, when the workspace was opened at a subdirectory (e.g. `/repo/packages/web`), tool calls citing the git-root-relative paths printed by `git diff` (e.g. `packages/web/src/foo.ts`) failed with `ENOENT` because the URI was joined with the workspace subdir.
 - `prReview.extraInstructions` paths now resolve against the git repo root as well. Previously they resolved against the first VS Code workspace folder, so a user with `{ "python": "./.review/team-python.md" }` and the file at the repo root would silently miss the extras when the workspace was opened at a subdirectory (the `try/catch` in the template loader swallows the file-not-found, so the team's custom rules just never reached the prompt). Setting description updated to match.
+- Review webview no longer produces a page-level horizontal scrollbar when a finding contains a long unbreakable line (URL, hash, wide code in `suggestedFix`). Root cause: the finding card's grid track was `auto 1fr`, whose implicit `auto` minimum expanded with content. Switched to `auto minmax(0, 1fr)` plus `min-width: 0` and `overflow-wrap: anywhere` on the content cell, capped `<pre>` at the parent width so its own `overflow-x: auto` takes over, and made the toolbar / finding header wrap on narrow widths.
 
 ### Added
 
 - Unit tests for `renderCommentBody` (`src/test/unit/github/renderCommentBody.test.ts`) and `renderReviewBody` (`src/test/unit/commands/renderReviewBody.test.ts`) covering default fencing and escalation when the suggested fix contains backtick runs.
 - Unit tests for `readFile` and `listDir` path resolution (`src/test/unit/agent/tools/pathResolution.test.ts`) verifying that relative paths are joined against the git root rather than a workspace subdirectory.
 - Unit test for `loadTemplate` extras resolution (`src/test/unit/templates.test.ts`) verifying that `prReview.extraInstructions` paths are read from the git root URI.
+- Unit tests for `.pyi` language detection and ruff scoping over `.pyi` stub files.
 
 ### Internal
 
